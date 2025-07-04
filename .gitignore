@@ -1,0 +1,15 @@
+# Helm chart archives
+*.tgz
+
+# Helm dependency directory
+charts/*/charts/
+
+# Helm lock files
+charts/*/requirements.lock
+charts/*/Chart.lock
+
+# Temporary files
+.DS_Store
+
+# Plandex
+.plandex-*

@@ -1,0 +1,20 @@
+# Secret managed with externalSecrets
+kind: Secret
+apiVersion: v1
+metadata:
+  creationTimestamp: "2025-05-30T10:55:07Z"
+  labels:
+    postgres-operator.crunchydata.com/cluster: postgres
+    postgres-operator.crunchydata.com/pguser: ente
+    postgres-operator.crunchydata.com/role: pguser
+  name: postgres-ente-env
+  namespace: ente
+  resourceVersion: "251549748"
+  uid: 19f05da7-fc8f-4547-89d1-2f2d5c8c78be
+type: Opaque
+data:
+  ENTE_DB_HOST: "postgres-primary.pgo.svc"
+  ENTE_DB_PORT: "5432"
+  ENTE_DB_NAME: "ente"
+  ENTE_DB_USER: "ente"
+  ENTE_DB_PASSWORD: "myverysecretentepassword"
