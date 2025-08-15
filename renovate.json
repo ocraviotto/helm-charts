@@ -1,0 +1,53 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        ":automergeMinor",
+        "config:recommended",
+        "helpers:pinGitHubActionDigestsToSemver",
+        "customManagers:dockerfileVersions",
+        "customManagers:helmChartYamlAppVersions"
+    ],
+    "customManagers": [
+        {
+            "customType": "regex",
+            "description": "Update ente appVersion",
+            "managerFilePatterns": [
+                "charts/ente/Chart.yaml"
+            ],
+            "matchStrings": [
+                "appVersion:\\s*\"?(?<currentValue>\\d\\.\\d\\.\\d?[a-z0-9\\-\\.]+?)\"? # This is the server version used git-based hash for the docker build"
+            ],
+            "depNameTemplate": "ghcr.io/ocraviotto/container-images/ente-server",
+            "versioningTemplate": "loose",
+            "datasourceTemplate": "docker"
+        }
+    ],
+    "packageRules": [
+        {
+            "matchFileNames": [
+                "charts/**"
+            ],
+            "bumpVersions": [
+                {
+                    "filePatterns": [
+                        "{{packageFileDir}}/Chart.{yaml,yml}"
+                    ],
+                    "matchStrings": [
+                        "version:\\s(?<version>[^\\s]+)"
+                    ],
+                    "bumpType": "{{#if isPatch}}patch{{else}}minor{{/if}}"
+                }
+            ]
+        },
+        {
+            "matchFileNames": [
+                ".github/**"
+            ],
+            "matchUpdateTypes": [
+                "patch",
+                "minor"
+            ],
+            "groupName": "Github Actions Dependencies (non-major)"
+        }
+    ]
+}
