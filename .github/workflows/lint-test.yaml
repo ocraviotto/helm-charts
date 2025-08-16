@@ -72,6 +72,7 @@ jobs:
           LINTER_RULES_PATH: .github/linters
           MULTI_STATUS: false
           VALIDATE_ALL_CODEBASE: false
+          # If you set any of the VALIDATE_[LANGUAGE] variables to true, super-linter defaults to leaving any unset variable to false (only validate those languages).
           VALIDATE_BASH: true
           VALIDATE_BASH_EXEC: true
           # VALIDATE_CHECKOV: true - always scans everything and all charts have too much errors
@@ -83,12 +84,14 @@ jobs:
           VALIDATE_MARKDOWN: true
           VALIDATE_NATURAL_LANGUAGE: true
           VALIDATE_PYTHON: true
-          VALIDATE_RENOVATE: false # does not support newest renovate config
+          #VALIDATE_RENOVATE: false # does not support newest renovate config
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_XML: true
 
   docs-check:
     name: Check Charts Docs
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout

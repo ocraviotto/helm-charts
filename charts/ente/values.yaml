@@ -169,11 +169,11 @@ web:
     nodeEnv: production
     # -- The value of the 'ENTE_API_ORIGIN' env var.
     # Leave empty unless you know what you're doing and are willing to see where else this is used...
-    # @default http://api.ente.example.com -> http(s)://api.[baseDomain] 
+    # @default http://api.ente.example.com -> http(s)://api.[baseDomain]
     enteApiOrigin: ""
     # -- The value of the 'ENTE_ALBUMS_ORIGIN' env var
     # Leave empty unless you know what you're doing and are willing to see where else this is used...
-    # @default http://albums.ente.example.com -> http(s)://albums.[baseDomain] 
+    # @default http://albums.ente.example.com -> http(s)://albums.[baseDomain]
     enteAlbumsOrigin: ""
 
   # -- Container level
