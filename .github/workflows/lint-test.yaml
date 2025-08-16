@@ -104,37 +104,29 @@ jobs:
       - name: Ensure documentation is updated
         uses: docker://jnorwood/helm-docs:v1.14.2
 
-      - name: Fail or Commit linted files
-        env:
-          PULL_BRANCH: ${{ github.event.pull_request.head.ref }}
+      - name: Check for changes
+        id: check
         run: |
-          if git diff --exit-code; then
-            echo -e "\n####### Git is clean - No changes on doc generation\n"
+          if git diff --quiet; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
           else
-            if [ "${{ github.event.pull_request.head.repo.full_name }}" = "ocraviotto/helm-charts" ]; then
-              git config --global user.name "${{ github.actor }}"
-              git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-
-              # Make sure we're on the correct branch
-              git fetch origin "$PULL_BRANCH"
-              git checkout "$PULL_BRANCH"
-
-              # Only README - make sure not just on root!
-              git add ':(icase)**/README*'
-
-              # Commit only if changes exist
-              if git diff --cached --exit-code; then
-                echo "No README changes staged."
-              else
-                git commit -m 'chore(docs): update generated helm-docs'
-                # Push back safely
-                git pull --rebase origin "$PULL_BRANCH"
-                git push --force-with-lease origin "$PULL_BRANCH"
-              fi
-            else
-              # Fail if the pull_request is from a fork
-              git status
-              echo -e "\n####### Git changes detected! Run helm-docs locally and commit README updates.\n"
-              exit 1
-            fi
+            echo "no_changes=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Fail on forks
+        if: steps.check.outputs.no_changes == 'false' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo -e "\n####### Git changes detected! Run helm-docs locally and commit README updates.\n"
+          exit 1
+
+      - name: Upload patch for Renovate branches
+        if: steps.check.outputs.no_changes == 'false' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git diff > changes.patch
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: steps.check.outputs.no_changes == 'false' && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          name: docs-patch
+          path: changes.patch
