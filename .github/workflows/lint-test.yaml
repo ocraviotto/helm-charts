@@ -119,8 +119,8 @@ jobs:
               git fetch origin "$PULL_BRANCH"
               git checkout "$PULL_BRANCH"
 
-              # Only README
-              git add ':(icase)README*'
+              # Only README - make sure not just on root!
+              git add ':(icase)**/README*'
 
               # Commit only if changes exist
               if git diff --cached --exit-code; then
