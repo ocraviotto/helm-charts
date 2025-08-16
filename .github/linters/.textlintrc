@@ -1,0 +1,10 @@
+{
+    "filters": {
+        "allowlist": {
+            "allow": [
+                "postgresql",
+                "/===IGNORE===[\\s\\S]*?===\/IGNORE===/m"
+            ]
+        }
+    }
+}

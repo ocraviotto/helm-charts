@@ -17,20 +17,19 @@ museum:
   # -- The upstream image is built once a week.
   # This image is built every time there is a new server deployed at ente.io
   # as detected by [renovate](https://github.com/ocraviotto/container-images/blob/main/renovate.json)
-  # and the [Github workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml).
-  # curl -s https://api.ente.io/ping | jq '.id'
+  # and the [GitHub workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml).
   image:
-    # -- My own repo to ensure timely builds
-    # [ghcr.io repo](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server).
+    # -- My own repository to ensure timely builds
+    # [ghcr.io repository](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server).
     repository: ocraviotto/container-images/ente-server
-    # -- Using Github Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/server)
+    # -- Using GitHub Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/server)
     registry: ghcr.io
     pullPolicy: IfNotPresent
     # -- If empty, it uses the chart appVersion, based on the latest docker releases in
-    # the image [Github Packages](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server)
+    # the image [GitHub Packages](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server)</br>
     # These tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
-    # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-server:0.0.20250814-1 | jq '.Labels."org.opencontainers.image.revision"'
-    # For details see: https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml
+    # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-server:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
+    # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
     tag: "0.0.20250815-69.1"
   service:
     type: ClusterIP
@@ -79,16 +78,16 @@ museum:
     readOnlyRootFilesystem: false
 
   # -- TLS configuration for the museum pod
-  # When enabled, the TLS secret needs to exist and its contents will be mounted under /etc/ente/credentials
+  # When enabled, the TLS secret needs to exist and its contents will be mounted under /etc/ente/credentials</br>
   # The secret needs to have these keys defined: tls.cert and tls.key. See the
-  # [production deployment README](https://github.com/ente-io/ente/blob/main/server/scripts/deploy/README.md)
+  # [production deployment readme](https://github.com/ente-io/ente/blob/main/server/scripts/deploy/README.md)
   tls:
     # -- Enable TLS for the museum service
     enabled: false
     # -- Name of the secret containing the TLS certificate and key
     secretName: ""
 
-  # -- Enable Prometheus metrics. For now not fully implemented (missing ServiceMonitor|PodMonitor)
+  # -- Enable Prometheus metrics. For now not fully implemented (missing ServiceMonitor\|PodMonitor)
   metrics:
     enabled: true
 
@@ -104,7 +103,7 @@ museum:
   # -- Non-sensitive configuration for museum, based on
   # [local.yaml](https://github.com/ente-io/ente/blob/main/server/configurations/local.yaml)
   # and used instead. Will be overwritten by anything in credentials
-  # See https://github.com/ente-io/ente/blob/886ceec05c9db07627afeb560fd29f45b0142d1b/server/pkg/utils/config/config.go#L48-L69
+  # See <https://github.com/ente-io/ente/blob/886ceec05c9db07627afeb560fd29f45b0142d1b/server/pkg/utils/config/config.go#L48-L69>
   # for config loading order.
   config: {}
 
@@ -113,18 +112,18 @@ web:
   # -- The upstream image is built once a week.
   # This image is built every time there is a new server deployed at ente.io
   # as detected by [renovate](https://github.com/ocraviotto/container-images/blob/main/renovate.json)
-  # and the [Github workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml).
+  # and the [GitHub workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml).
   image:
-    # -- My own repo to ensure timely builds
-    # [ghcr.io repo](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-web).
+    # -- My own repository to ensure timely builds
+    # [ghcr.io repository](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-web).
     repository: ocraviotto/container-images/ente-web
-    # -- Using Github Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/web)
+    # -- Using GitHub Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/web)
     registry: ghcr.io
     pullPolicy: IfNotPresent
-    # -- Can be a tag or digest. The image is built every time we trigger a server build, and the source uses ente's main branch.
+    # -- Can be a tag or digest. The image is built every time we trigger a server build, and the source uses ente's main branch.</br>
     # The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
-    # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 | jq '.Labels."org.opencontainers.image.revision"'`
-    # For details see: https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml
+    # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
+    # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
     tag: "0.0.20250815-69.1"
 
   # -- Web [service](https://kubernetes.io/docs/concepts/services-networking/service/) resource configuration
@@ -169,11 +168,11 @@ web:
     nodeEnv: production
     # -- The value of the 'ENTE_API_ORIGIN' env var.
     # Leave empty unless you know what you're doing and are willing to see where else this is used...
-    # @default http://api.ente.example.com -> http(s)://api.[baseDomain]
+    # @default <http://api.ente.example.com> -> http(s)://api.[baseDomain]
     enteApiOrigin: ""
     # -- The value of the 'ENTE_ALBUMS_ORIGIN' env var
     # Leave empty unless you know what you're doing and are willing to see where else this is used...
-    # @default http://albums.ente.example.com -> http(s)://albums.[baseDomain]
+    # @default <http://albums.ente.example.com> -> http(s)://albums.[baseDomain]
     enteAlbumsOrigin: ""
 
   # -- Container level
@@ -257,7 +256,7 @@ enteCredentials:
   # configuration details in your secret, along others (like smpt etc.).
   # The secret must have the configuration under the `credentials.yaml` key.
   # If providing your own secret, you'll need to restart the museum container on secret changes
-  # (or use something like https://github.com/stakater/Reloader)
+  # (or use something like <https://github.com/stakater/Reloader>)
   existingSecret: ""
   # -- Set to true to force regeneration of auto-generated secrets on every helm upgrade.
   # We'll otherwise try to fetch the jwt and key material from the existing secret.
@@ -346,13 +345,13 @@ securityContext:
     - SETUID
   readOnlyRootFilesystem: false
 
-# -- Included PostgrSQL configuration
+# -- Included PostgreSQL configuration
 postgresql:
   # -- In "production-like" environments you should modify the values below or better still,
   # run one of Crunchy Postgres Operator (PGO) or CloudNativePG
   enabled: true
   # Values to pass to the postgresql sub-chart.
-  # See https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+  # See <https://github.com/bitnami/charts/tree/main/bitnami/postgresql>
   auth:
     database: ente_db
     username: pguser
@@ -368,7 +367,7 @@ minio:
   # or even better, run MinIO via its own operator.
   enabled: true
   # -- Values to pass to the minio sub-chart.
-  # See https://github.com/bitnami/charts/tree/main/bitnami/minio
+  # See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
   auth:
     # In production you should consider using an existingSecret or pass these via the cli instead of setting clear values below
     rootUser: changeme
@@ -384,7 +383,7 @@ minio:
 minioSetup:
   enabled: true
   # -- If using an external minio instance, set to the service endpoint
-  # @default -- http://[helm-release]-minio:9000
+  # @default -- <http://[helm-release]-minio:9000>
   minioUrl: ""
   # -- List of buckets to be created by the minio-setup job, used by ente on
   # If emptied, the job will not be created

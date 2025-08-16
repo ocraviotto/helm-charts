@@ -12,8 +12,8 @@ museum:
     port: 443
     annotations:
       external-dns.alpha.kubernetes.io/hostname: api.ente.myexample.com # Make sure to match the baseDomain
-  
-  extraEnvFromSecret: 
+
+  extraEnvFromSecret:
     - postgres-ente-env
 
   tls:
