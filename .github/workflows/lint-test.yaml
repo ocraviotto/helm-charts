@@ -115,6 +115,10 @@ jobs:
               git config --global user.name "${{ github.actor }}"
               git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
+              # Make sure we're on the correct branch
+              git fetch origin "$PULL_BRANCH"
+              git checkout "$PULL_BRANCH"
+
               # Only README - make sure not just on root!
               git add ':(icase)**/README*'
 
