@@ -115,8 +115,8 @@ jobs:
               git config --global user.name "${{ github.actor }}"
               git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-              # Only README
-              git add ':(icase)README*'
+              # Only README - make sure not just on root!
+              git add ':(icase)**/README*'
 
               # Commit only if changes exist
               if git diff --cached --exit-code; then
