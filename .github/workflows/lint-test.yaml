@@ -99,12 +99,37 @@ jobs:
       - name: Ensure documentation is updated
         uses: docker://jnorwood/helm-docs:v1.14.2
 
-      - name: Check for changes
+      - name: Fail or Commit linted files
         run: |
           if git diff --exit-code; then
-            echo -e "\n####### Git is clean\n"
+            echo -e "\n####### Git is clean - No changes on doc generation\n"
           else
-            git status
-            echo -e "\n####### Git changes detected! Check and commit changes !!!\n"
-            exit 1
+            if [ "${{ github.event.pull_request.head.repo.full_name }}" = "ocraviotto/helm-charts" ]; then
+              git config --global user.name "${{ github.actor }}"
+              git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+              # Make sure we're on the correct branch
+              BRANCH="${{ github.event.pull_request.head.ref }}"
+              git fetch origin "$BRANCH"
+              git checkout "$BRANCH"
+
+              # Only README
+              git add ':(icase)README*'
+
+              # Commit only if changes exist
+              if git diff --cached --exit-code; then
+                echo "No README changes staged."
+              else
+                git commit -m 'chore(docs): update generated helm-docs'
+                
+                # Push back safely
+                git pull --rebase origin "$BRANCH"
+                git push --force-with-lease origin "$BRANCH"
+              fi
+            else
+              # Fail if the pull_request is from a fork
+              git status
+              echo -e "\n####### Git changes detected! Run helm-docs locally and commit README updates.\n"
+              exit 1
+            fi
           fi

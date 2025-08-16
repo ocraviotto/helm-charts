@@ -54,15 +54,15 @@ spec:
         - name: web
           securityContext:
             {{- .Values.web.securityContext | default .Values.securityContext | toYaml | nindent 12 }}
-          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.web.image.registry }}/{{ .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
           env:
             - name: NODE_ENV
               value: {{ .Values.web.config.nodeEnv | quote }}
             - name: ENTE_API_ORIGIN
-              value: {{ include "ente.web.apiOrigin" . | quote }}
+              value: {{ .Values.web.config.enteApiOrigin | default (include "ente.web.apiOrigin" .) | quote }}
             - name: ENTE_ALBUMS_ORIGIN
-              value: {{ include "ente.apps.publicAlbumsUrl" . | quote }}
+              value: {{ .Values.web.config.enteAlbumsOrigin | default (include "ente.apps.publicAlbumsUrl" .) | quote }}
             # These are not really required, but documented here just in case:
             # they are used in js files when running yarn to get the above values.
             # The dockerfile uses a placeholder at buildtime that gets replaced at

@@ -7,16 +7,16 @@ This is a Helm chart for [Ente](https://ente.io), a simple, encrypted, and self-
 
 ## Introduction
 
-This chart bootstraps an Ente deployment on a Kubernetes cluster using the Helm package manager. It can optionally deploy PostgreSQL and MinIO as dependencies.
+This chart bootstraps an Ente deployment on a Kubernetes cluster using the Helm package manager. It defaults to deploying PostgreSQL and MinIO as dependencies.
 
 ## Prerequisites
 
 * Kubernetes 1.23+
 * Helm 3.8.0+
 
-## Additionally
+### Additionally
 
-If enabling PostgreSQL or MinIO:
+If using the included PostgreSQL and/or MinIO:
 
 * PV provisioner support in the underlying infrastructure
 
@@ -35,6 +35,11 @@ To uninstall/delete the `home-ente` release:
 ```bash
 helm delete home-ente
 ```
+
+## Example
+
+The [external-resources example](examples/external-resources) contains a modified values file to use with a more production-like environment.
+Make sure to check it out if intending on a more serious use of Ente.
 
 {{ template "chart.homepageLine" . }}
 

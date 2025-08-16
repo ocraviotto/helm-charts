@@ -12,10 +12,10 @@
             "customType": "regex",
             "description": "Update ente appVersion",
             "managerFilePatterns": [
-                "charts/ente/Chart.yaml"
+                "/^charts/ente/Chart.yaml$/"
             ],
             "matchStrings": [
-                "appVersion:\\s*\"?(?<currentValue>\\d\\.\\d\\.\\d?[a-z0-9\\-\\.]+?)\"? # This is the server version used git-based hash for the docker build"
+                "appVersion:\\s*\"?(?<currentValue>\\d\\.\\d\\.\\d?[a-z0-9\\-\\.]+?)\"? # This is the server build"
             ],
             "depNameTemplate": "ghcr.io/ocraviotto/container-images/ente-server",
             "versioningTemplate": "loose",
@@ -29,8 +29,9 @@
             ],
             "bumpVersions": [
                 {
+                    "name": "Bump Chart.yaml version",
                     "filePatterns": [
-                        "{{packageFileDir}}/Chart.{yaml,yml}"
+                        "/^({{#each (distinct (lookupArray upgrades \"packageFileDir\"))}}{{{.}}}{{#unless @last}}|{{/unless}}{{/each}})/Chart\\.(yaml|yml)$/"
                     ],
                     "matchStrings": [
                         "version:\\s(?<version>[^\\s]+)"
@@ -48,6 +49,19 @@
                 "minor"
             ],
             "groupName": "Github Actions Dependencies (non-major)"
+        },
+        {
+            "matchDatasources": [
+                "docker"
+            ],
+            "matchFileNames": [
+                "/^charts/ente/values.yaml$/"
+            ],
+            "matchPackageNames": [
+                "ghcr.io/ocraviotto/container-images/ente-server",
+                "ghcr.io/ocraviotto/container-images/ente-web"
+            ],
+            "versioning": "loose"
         }
     ]
 }

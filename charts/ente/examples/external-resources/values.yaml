@@ -129,7 +129,7 @@ extraResources:
             remoteKey: postgres-ente-env
             property: ENTE_DB_PASSWORD
   - # Secret to mount as credentials.yaml
-    # see example-external-resources/museum-credentials.yaml
+    # see museum-credentials.yaml
     apiVersion: external-secrets.io/v1
     kind: ExternalSecret
     metadata:
@@ -139,10 +139,10 @@ extraResources:
       refreshInterval: 1h
       secretStoreRef:
         kind: ClusterSecretStore
-        name: vault-backend-casa
+        name: vault-backend-mycluster
       dataFrom:
         - extract:
-            key: /casa/ente/museum-credentials
+            key: /mycluster/ente/museum-credentials
   - apiVersion: cert-manager.io/v1
     kind: Certificate
     metadata:
