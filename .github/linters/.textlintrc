@@ -1,0 +1,14 @@
+{
+    "filters": {
+        "allowlist": {
+            "allow": [
+                "postgresql",
+                "/===IGNORE===[\\s\\S]*?===\/IGNORE===/m"
+            ]
+        },
+        "comments": true
+    },
+    "rules": {
+        "terminology": true
+    }
+}

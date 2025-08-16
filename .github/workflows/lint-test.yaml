@@ -15,6 +15,7 @@ jobs:
   lint-test:
     name: Lint and Test Charts
     runs-on: ubuntu-24.04
+    needs: docs-check
     permissions:
       contents: read
     steps:
@@ -55,8 +56,9 @@ jobs:
         run: ct install --config .github/linters/ct.yaml
 
   super-linter:
-    name: Lint Code Base
+    name: Lint All
     runs-on: ubuntu-24.04
+    needs: docs-check
     permissions:
       contents: read
     steps:
@@ -72,6 +74,7 @@ jobs:
           LINTER_RULES_PATH: .github/linters
           MULTI_STATUS: false
           VALIDATE_ALL_CODEBASE: false
+          # If you set any of the VALIDATE_[LANGUAGE] variables to true, super-linter defaults to leaving any unset variable to false (only validate those languages).
           VALIDATE_BASH: true
           VALIDATE_BASH_EXEC: true
           # VALIDATE_CHECKOV: true - always scans everything and all charts have too much errors
@@ -83,12 +86,14 @@ jobs:
           VALIDATE_MARKDOWN: true
           VALIDATE_NATURAL_LANGUAGE: true
           VALIDATE_PYTHON: true
-          VALIDATE_RENOVATE: false # does not support newest renovate config
+          #VALIDATE_RENOVATE: false # does not support newest renovate config
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_XML: true
 
   docs-check:
     name: Check Charts Docs
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -99,12 +104,37 @@ jobs:
       - name: Ensure documentation is updated
         uses: docker://jnorwood/helm-docs:v1.14.2
 
-      - name: Check for changes
+      - name: Fail or Commit linted files
+        env:
+          PULL_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           if git diff --exit-code; then
-            echo -e "\n####### Git is clean\n"
+            echo -e "\n####### Git is clean - No changes on doc generation\n"
           else
-            git status
-            echo -e "\n####### Git changes detected! Check and commit changes !!!\n"
-            exit 1
+            if [ "${{ github.event.pull_request.head.repo.full_name }}" = "ocraviotto/helm-charts" ]; then
+              git config --global user.name "${{ github.actor }}"
+              git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+              # Make sure we're on the correct branch
+              git fetch origin "$PULL_BRANCH"
+              git checkout "$PULL_BRANCH"
+
+              # Only README
+              git add ':(icase)README*'
+
+              # Commit only if changes exist
+              if git diff --cached --exit-code; then
+                echo "No README changes staged."
+              else
+                git commit -m 'chore(docs): update generated helm-docs'
+                # Push back safely
+                git pull --rebase origin "$PULL_BRANCH"
+                git push --force-with-lease origin "$PULL_BRANCH"
+              fi
+            else
+              # Fail if the pull_request is from a fork
+              git status
+              echo -e "\n####### Git changes detected! Run helm-docs locally and commit README updates.\n"
+              exit 1
+            fi
           fi

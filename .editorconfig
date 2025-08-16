@@ -10,7 +10,7 @@ indent_style = space
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[*.{sh,yml,yaml}]
+[*.{sh,yml,yaml,tpl}]
 indent_size = 2
 
 [*.{md,md.gotmpl}]

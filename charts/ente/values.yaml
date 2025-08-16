@@ -1,23 +1,36 @@
+# -- Optional list of references to secrets in the same namespace to use for pulling any of the images used.
 imagePullSecrets: []
+
+# -- When set, used instead of the name of the chart in the Chart.yaml file
 nameOverride: ""
+# -- When set, replaces the generated name (a combination of the release name and the chart's)
 fullnameOverride: ""
 
 # -- The base domain for the ente installation, used to generate default URLs
 baseDomain: "ente.example.com"
 
-# -- Museum (backend) configuration
 museum:
   # -- Number of [museum](https://help.ente.io/self-hosting/museum) instances to run.
-  # Since persistence is handled by MinIO and PostgreSQL, this is a stateless?
+  # Since persistence is handled by MinIO and PostgreSQL, this should be(TM) stateless.
   replicaCount: 1
+
+  # -- The upstream image is built once a week.
+  # This image is built every time there is a new server deployed at ente.io
+  # as detected by [renovate](https://github.com/ocraviotto/container-images/blob/main/renovate.json)
+  # and the [GitHub workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml).
   image:
-    repository: ghcr.io/ente-io/server
+    # -- My own repository to ensure timely builds
+    # [ghcr.io repository](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server).
+    repository: ocraviotto/container-images/ente-server
+    # -- Using GitHub Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/server)
+    registry: ghcr.io
     pullPolicy: IfNotPresent
-    # -- If empty, it uses the chart appVersion, based on docker releases in [Github Packages](https://github.com/ente-io/ente/pkgs/container/server)
-    # See [Github Workflow](https://github.com/ente-io/ente/blob/main/.github/workflows/server-publish-ghcr.yml)
-    # for details on docker releases (every 15th of every month, at 05:00 UTC)
-    # @default cc3f20831a1aca8dd4ed3b44159e24234c296fe8
-    tag: ""
+    # -- If empty, it uses the chart appVersion, based on the latest docker releases in
+    # the image [GitHub Packages](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server)</br>
+    # These tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
+    # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-server:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
+    # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
+    tag: "0.0.20250815-69.1"
   service:
     type: ClusterIP
     port: 8080
@@ -65,16 +78,16 @@ museum:
     readOnlyRootFilesystem: false
 
   # -- TLS configuration for the museum pod
-  # When enabled, the TLS secret needs to exist and its contents will be mounted under /etc/ente/credentials
+  # When enabled, the TLS secret needs to exist and its contents will be mounted under /etc/ente/credentials</br>
   # The secret needs to have these keys defined: tls.cert and tls.key. See the
-  # [production deployment README](https://github.com/ente-io/ente/blob/main/server/scripts/deploy/README.md)
+  # [production deployment readme](https://github.com/ente-io/ente/blob/main/server/scripts/deploy/README.md)
   tls:
     # -- Enable TLS for the museum service
     enabled: false
     # -- Name of the secret containing the TLS certificate and key
     secretName: ""
 
-  # -- Enable Prometheus metrics. For now not fully implemented
+  # -- Enable Prometheus metrics. For now not fully implemented (missing ServiceMonitor\|PodMonitor)
   metrics:
     enabled: true
 
@@ -90,29 +103,38 @@ museum:
   # -- Non-sensitive configuration for museum, based on
   # [local.yaml](https://github.com/ente-io/ente/blob/main/server/configurations/local.yaml)
   # and used instead. Will be overwritten by anything in credentials
-  # See https://github.com/ente-io/ente/blob/886ceec05c9db07627afeb560fd29f45b0142d1b/server/pkg/utils/config/config.go#L48-L69
+  # See <https://github.com/ente-io/ente/blob/886ceec05c9db07627afeb560fd29f45b0142d1b/server/pkg/utils/config/config.go#L48-L69>
   # for config loading order.
   config: {}
 
-# -- Web (frontend) details used for its service and deployment
 web:
   replicaCount: 1
+  # -- The upstream image is built once a week.
+  # This image is built every time there is a new server deployed at ente.io
+  # as detected by [renovate](https://github.com/ocraviotto/container-images/blob/main/renovate.json)
+  # and the [GitHub workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml).
   image:
-    repository: ghcr.io/ente-io/web
+    # -- My own repository to ensure timely builds
+    # [ghcr.io repository](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-web).
+    repository: ocraviotto/container-images/ente-web
+    # -- Using GitHub Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/web)
+    registry: ghcr.io
     pullPolicy: IfNotPresent
-    # -- Currently based on docker releases in [Github Packages](https://github.com/ente-io/ente/pkgs/container/web)
-    # See [Github Workflow](https://github.com/ente-io/ente/blob/main/.github/workflows/web-publish-ghcr.yml)
-    # for details on docker releases (Run automatically every Wednesday, at 07:00 UTC)
-    tag: 096a1dd04302e11e6c7c85dc7bf404ba37172d48
+    # -- Can be a tag or digest. The image is built every time we trigger a server build, and the source uses ente's main branch.</br>
+    # The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
+    # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
+    # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
+    tag: "0.0.20250815-69.1"
 
   # -- Web [service](https://kubernetes.io/docs/concepts/services-networking/service/) resource configuration
-  # exposing only service type and ports to expose
+  # exposing only service type and ports to serve
   service:
     # -- Service [Type](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
     type: ClusterIP
     # -- The list of ports that are exposed by this service.
     # See the [ServiceSpec](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/#ServiceSpec) for details on fields.
-    # See [docs for an additional background on service ports and virtual IPs](https://kubernetes.io/docs/reference/networking/virtual-ips/).
+    # See [docs for an additional background on service ports and virtual IPs](https://kubernetes.io/docs/reference/networking/virtual-ips/).\n
+    # NOTE: If you manually override any of these, make sure that's reflected elsewhere (e.g. .museum.config.enteAlbumsOrigin for public-albums etc.)
     ports:
       - name: photos
         port: 3000
@@ -140,9 +162,18 @@ web:
         # -- Optional override. Defaults to `cast.baseDomain` if empty.
         hostname: ""
 
-  # 
+  # -- Various convenience settings exposed as fields to manage web configuration
   config:
+    # -- The value of the 'NODE_ENV' env var
     nodeEnv: production
+    # -- The value of the 'ENTE_API_ORIGIN' env var.
+    # Leave empty unless you know what you're doing and are willing to see where else this is used...
+    # @default <http://api.ente.example.com> -> http(s)://api.[baseDomain]
+    enteApiOrigin: ""
+    # -- The value of the 'ENTE_ALBUMS_ORIGIN' env var
+    # Leave empty unless you know what you're doing and are willing to see where else this is used...
+    # @default <http://albums.ente.example.com> -> http(s)://albums.[baseDomain]
+    enteAlbumsOrigin: ""
 
   # -- Container level
   # [resource limits and requests](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-requests-and-limits-of-pod-and-container)
@@ -172,6 +203,7 @@ web:
   # -- Web Pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
   affinity: {}
 
+# -- Ingress section with both targets
 ingress:
   museum:
     enabled: false
@@ -223,8 +255,8 @@ enteCredentials:
   # If set, we will not create a chart secret and you will need to make sure to provide `jwt`, `key`, `db` and `s3`
   # configuration details in your secret, along others (like smpt etc.).
   # The secret must have the configuration under the `credentials.yaml` key.
-  # If set, you'll need to restart the museum container on secret changes
-  # (or use something like https://github.com/stakater/Reloader)
+  # If providing your own secret, you'll need to restart the museum container on secret changes
+  # (or use something like <https://github.com/stakater/Reloader>)
   existingSecret: ""
   # -- Set to true to force regeneration of auto-generated secrets on every helm upgrade.
   # We'll otherwise try to fetch the jwt and key material from the existing secret.
@@ -263,7 +295,7 @@ enteCredentials:
         bucket: scw-eu-fr-v3
 
   # -- Configuration for external services if sub-charts are disabled
-  # NOTE: These should be set in a secret and will not be used if `existingSecret` is set
+  # NOTE: These values will be set in a secret and will not be used if `existingSecret` is set
   externalDatabase:
     enabled: false
     host: ""
@@ -295,6 +327,11 @@ podSecurityContext:
 # [securityContenxt](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container)
 # used with both web and museum
 # Can be overwritten with museum.securityContext or web.securityContext.
+# These are more generous than the permissions we default to for the server (museum) and the web applications separately,
+# and are here for reference, as they are used if the web or museum versions are not provided.
+# Web needs to modify js files on startup does some other changes (nginx docker-entrypoint)
+# NET_BIND_SERVICE is required when running with TLS by the museum API
+# Both write to the FS outside the mounted points
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
@@ -308,13 +345,13 @@ securityContext:
     - SETUID
   readOnlyRootFilesystem: false
 
-# -- Included PostgrSQL configuration
+# -- Included PostgreSQL configuration
 postgresql:
-  # -- In "production-like" environments you should modify the values below or better still
+  # -- In "production-like" environments you should modify the values below or better still,
   # run one of Crunchy Postgres Operator (PGO) or CloudNativePG
   enabled: true
   # Values to pass to the postgresql sub-chart.
-  # See https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+  # See <https://github.com/bitnami/charts/tree/main/bitnami/postgresql>
   auth:
     database: ente_db
     username: pguser
@@ -330,7 +367,7 @@ minio:
   # or even better, run MinIO via its own operator.
   enabled: true
   # -- Values to pass to the minio sub-chart.
-  # See https://github.com/bitnami/charts/tree/main/bitnami/minio
+  # See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
   auth:
     # In production you should consider using an existingSecret or pass these via the cli instead of setting clear values below
     rootUser: changeme
@@ -346,7 +383,7 @@ minio:
 minioSetup:
   enabled: true
   # -- If using an external minio instance, set to the service endpoint
-  # @default -- http://[helm-release]-minio:9000
+  # @default -- <http://[helm-release]-minio:9000>
   minioUrl: ""
   # -- List of buckets to be created by the minio-setup job, used by ente on
   # If emptied, the job will not be created

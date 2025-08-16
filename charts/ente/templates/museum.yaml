@@ -57,7 +57,7 @@ spec:
         - name: museum
           securityContext:
             {{- .Values.museum.securityContext | default .Values.securityContext | toYaml | nindent 12 }}
-          image: "{{ .Values.museum.image.repository }}:{{ .Values.museum.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.museum.image.registry }}/{{ .Values.museum.image.repository }}:{{ .Values.museum.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.museum.image.pullPolicy }}
           {{- range .Values.museum.extraEnvFromSecret }}
           envFrom:
