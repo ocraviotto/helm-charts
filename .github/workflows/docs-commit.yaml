@@ -1,0 +1,41 @@
+name: Docs Commit
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches:
+      - "renovate/**"
+      - "attempt-renovate-docs-self-fix"
+
+jobs:
+  apply-patch:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository == 'ocraviotto/helm-charts' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: Download patch
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-patch
+          path: .
+
+      - name: Apply patch
+        run: |
+          git apply changes.patch || echo "Nothing to apply"
+
+      - name: Commit & push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add ':(icase)**/README*'
+            git commit -m "chore(docs): update generated helm-docs"
+            git push --force-with-lease origin HEAD:${{ github.event.workflow_run.head_branch }}
+          else
+            echo "No README changes to commit."
+          fi
