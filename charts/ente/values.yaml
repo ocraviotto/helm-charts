@@ -25,12 +25,12 @@ museum:
     # -- Using GitHub Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/server)
     registry: ghcr.io
     pullPolicy: IfNotPresent
-    # -- If empty, it uses the chart appVersion, based on the latest docker releases in
+    # -- If empty, it uses the chart appVersion, based on the latest Docker image release in
     # the image [GitHub Packages](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-server)</br>
     # These tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
     # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-server:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
     # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
-    tag: "0.0.20250815-69.1"
+    tag: "0.0.20250821-74.1"
   service:
     type: ClusterIP
     port: 8080
@@ -124,7 +124,7 @@ web:
     # The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
     # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
     # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
-    tag: "0.0.20250815-69.1"
+    tag: "0.0.20250821-74.1"
 
   # -- Web [service](https://kubernetes.io/docs/concepts/services-networking/service/) resource configuration
   # exposing only service type and ports to serve
