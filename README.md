@@ -77,4 +77,4 @@ To release a new version of a chart, you need to create Pull Request against mai
 4. **Make sure that checks pass**: See details on failed actions if necessary, and only expect a review and approval/merge once all checks pass.
 
     See [Pull Request Workflows](#pull-request-workflow-lint-testyaml) for additional details.
-    Merging to main will eventually release (create a [Github Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)) and upload the chart as an OCI artifact to [this repository's GitHub Container Registry (GHCR)](https://github.com/ocraviotto?tab=packages&repo_name=helm-charts).
+    Merging to main will eventually release (create a [GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)) and upload the chart as an OCI artifact to [this repository's GitHub Container Registry (GHCR)](https://github.com/ocraviotto?tab=packages&repo_name=helm-charts).

@@ -41,7 +41,7 @@ if grep -q "$START_MARK" "$README_FILE"; then
   awk -v start="$START_MARK" -v tbl="$table" '
     { print }
     $0 ~ start { print tbl }
-  ' "$README_FILE" > "$README_FILE.tmp" && mv "$README_FILE.tmp" "$README_FILE"
+  ' "$README_FILE" >"$README_FILE.tmp" && mv "$README_FILE.tmp" "$README_FILE"
 else
   # Append fresh block at end
   {
@@ -49,7 +49,7 @@ else
     echo "$START_MARK"
     echo "$table"
     echo "$END_MARK"
-  } >> "$README_FILE"
+  } >>"$README_FILE"
 fi
 
 echo "✅ Updated charts table in $README_FILE"
