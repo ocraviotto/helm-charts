@@ -23,7 +23,7 @@ All Helm charts are located in the `charts/` directory. Each chart resides in it
 <!-- CHARTS_TABLE_START -->
 | Chart | Description | Version | Packages |
 |-------|-------------|---------|----------|
-| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.5 | [ghcr.io](ghcr.io/ocraviotto/ente) |
+| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.5 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fente) |
 <!-- CHARTS_TABLE_END -->
 
 ## Adding a New Chart

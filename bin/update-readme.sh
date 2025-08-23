@@ -23,7 +23,7 @@ for chart in "$CHARTS_DIR"/*; do
     desc=$(yq e '.description' "$chart/Chart.yaml")
     version=$(yq e '.version' "$chart/Chart.yaml")
     readme_link="[$name]($chart/README.md)"
-    ghcr_link="[ghcr.io]($GHCR_ORG/$name)"
+    ghcr_link="[ghcr.io](${GHCR_ORG}$name)"
     rows+="| $readme_link | $desc | $version | $ghcr_link |\n"
   fi
 done
