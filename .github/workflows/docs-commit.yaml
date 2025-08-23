@@ -10,7 +10,7 @@ on:
 
 jobs:
   apply-patch:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository == 'ocraviotto/helm-charts' }}
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == 'ocraviotto/helm-charts'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout PR branch
