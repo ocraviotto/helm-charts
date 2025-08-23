@@ -33,8 +33,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
-            git add ':(icase)**/README*'
-            git commit -m "chore(docs): update generated helm-docs"
+            git add ':(icase)README*'
+            git commit -m "chore(docs): update READMEs"
             git push --force-with-lease origin HEAD:${{ github.event.workflow_run.head_branch }}
           else
             echo "No README changes to commit."

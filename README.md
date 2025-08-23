@@ -18,6 +18,14 @@ All Helm charts are located in the `charts/` directory. Each chart resides in it
 └── README.md
 ```
 
+## Charts
+
+<!-- CHARTS_TABLE_START -->
+| Chart | Description | Version | Packages |
+|-------|-------------|---------|----------|
+| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.4 | [ghcr.io](ghcr.io/ocraviotto/ente) |
+<!-- CHARTS_TABLE_END -->
+
 ## Adding a New Chart
 
 NOTE: If not sure how to contribute to a public repository, you can follow the [Contributing to a project](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project) guide.
@@ -56,21 +64,17 @@ All checks must pass before a pull request can be merged.
 
 ### Release Workflow (`release.yaml`)
 
-Releases are automated and triggered by pushing a Git tag that matches the chart's version.
+Releases are automated and triggered by pushing to main (protected branch).
 
-To release a new version of a chart:
+To release a new version of a chart, you need to create Pull Request against main:
 
-1. **Update `Chart.yaml`**: Increment the `version` and/or `appVersion` in the `charts/<your-chart-name>/Chart.yaml` file.
+1. **Branch out from main**: Make sure to create fetch latest main and create a new branch to identify your chart bump.
 
-2. **Commit Changes**: Commit the updated `Chart.yaml` file.
+2. **Update `Chart.yaml`**: Increment the `version` and/or `appVersion` in the `charts/<your-chart-name>/Chart.yaml` file using [Semantic Versioning](https://semver.org/).
 
-3. **Tag the Release**: Create and push a Git tag that matches the chart name and the new version. The tag format is `<chart-name>-v<version>`.
+3. **Commit Changes**: Commit the updated `Chart.yaml` file (and any other modified one of course).
 
-    For example, to release version `0.2.0` of `example-chart`:
+4. **Make sure that checks pass**: See details on failed actions if necessary, and only expect a review and approval/merge once all checks pass.
 
-    ```sh
-    git tag example-chart-v0.2.0
-    git push origin example-chart-v0.2.0
-    ```
-
-Pushing a tag will trigger the release workflow, which packages the chart and publishes it as an OCI artifact to the GitHub Container Registry (GHCR).
+    See [Pull Request Workflows](#pull-request-workflow-lint-testyaml) for additional details.
+    Merging to main will eventually release (create a [Github Release](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases)) and upload the chart as an OCI artifact to [this repository's GitHub Container Registry (GHCR)](https://github.com/ocraviotto?tab=packages&repo_name=helm-charts).

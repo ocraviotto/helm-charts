@@ -104,6 +104,12 @@ jobs:
       - name: Ensure documentation is updated
         uses: docker://jnorwood/helm-docs:v1.14.2
 
+      - name: Ensure charts list is up-to-date too
+        run: |
+          # Ensure we have yq
+          sudo apt-get update && sudo apt-get install -y yq
+          ./bin/update-readme.sh
+
       - name: Check for changes
         id: check
         run: |
