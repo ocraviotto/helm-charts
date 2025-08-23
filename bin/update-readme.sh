@@ -2,7 +2,7 @@
 set -euo pipefail
 
 CHARTS_DIR="charts"
-GHCR_ORG="ghcr.io/${GITHUB_REPOSITORY_OWNER:-ocraviotto}"
+GHCR_ORG="https://github.com/users/ocraviotto/packages/container/package/charts%2F"
 README_FILE="README.md"
 
 START_MARK="<!-- CHARTS_TABLE_START -->"
