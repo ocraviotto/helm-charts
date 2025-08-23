@@ -7,15 +7,19 @@
         "customManagers:dockerfileVersions",
         "customManagers:helmChartYamlAppVersions"
     ],
+    "labels": [
+        "dependencies"
+    ],
+    "rebaseWhen": "behind-base-branch",
     "customManagers": [
         {
             "customType": "regex",
             "description": "Update ente appVersion",
             "managerFilePatterns": [
-                "/^charts/ente/Chart.yaml$/"
+                "charts/ente/Chart.yaml"
             ],
             "matchStrings": [
-                "appVersion:\\s*\"?(?<currentValue>\\d\\.\\d\\.\\d?[a-z0-9\\-\\.]+?)\"?  # This is the server build"
+                "appVersion:\\s*\"?(?<currentValue>\\d+\\.\\d+\\.\\d+?[a-z0-9\\-\\.]+?)\"?  # This is the server build"
             ],
             "depNameTemplate": "ghcr.io/ocraviotto/container-images/ente-server",
             "versioningTemplate": "loose",
@@ -23,27 +27,6 @@
         }
     ],
     "packageRules": [
-        {
-            "matchFileNames": [
-                "charts/**"
-            ],
-            "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependency updates",
-            "postUpdateOptions": [
-                "helmUpdateSubChartArchives"
-            ],
-            "bumpVersions": [
-                {
-                    "name": "Updating Chart version",
-                    "filePatterns": [
-                        "/^(?:{{#each (distinct (lookupArray upgrades \"packageFileDir\"))}}{{#each (split . \"/\")}}(?:{{{.}}}/{{/each}}{{#each (split . \"/\")}}){{#unless @last}}?{{/unless}}{{/each}}{{#unless @last}}|{{/unless}}{{/each}})Chart\\.ya?ml$/"
-                    ],
-                    "matchStrings": [
-                        "(?:^|\\n)version:\\s\"?(?<version>([1-9]\\d*|\\d+\\.[1-9]\\d*|\\d+\\.\\d+\\.[1-9]\\d*)\\.\\d+\\.\\d+)\"?(?:$|\\n)"
-                    ],
-                    "bumpType": "{{#if isPatch}}patch{{else}}minor{{/if}}"
-                }
-            ]
-        },
         {
             "matchFileNames": [
                 ".github/**"
@@ -55,11 +38,33 @@
             "groupName": "Github Actions Dependencies (non-major)"
         },
         {
+            "matchFileNames": [
+                "charts/**"
+            ],
+            "commitMessagePrefix": "[{{ lookup (split packageFileDir '/') 1 }}] ",
+            "groupName": "{{ lookup (split packageFileDir '/') 1 }} dependency updates",
+            "postUpdateOptions": [
+                "helmUpdateSubChartArchives"
+            ],
+            "bumpVersions": [
+                {
+                    "name": "Updating Chart version",
+                    "filePatterns": [
+                        "/^({{#each (distinct (lookupArray upgrades \"packageFileDir\"))}}{{{lookup (split . \"/\") 0}}}/{{{lookup (split . \"/\") 1}}}{{#unless @last}}|{{/unless}}{{/each}})/Chart\\.ya?ml$/"
+                    ],
+                    "matchStrings": [
+                        "(?:^|\\n)version:\\s\"?(?<version>\\d+\\.\\d+\\.\\d+)\"?(?:$|\\n)"
+                    ],
+                    "bumpType": "{{#if (or isPinDigest isPatch)}}patch{{else}}minor{{/if}}"
+                }
+            ]
+        },
+        {
             "matchDatasources": [
                 "docker"
             ],
             "matchFileNames": [
-                "/^charts/ente/values.yaml$/"
+                "charts/ente/values.yaml"
             ],
             "matchPackageNames": [
                 "ghcr.io/ocraviotto/container-images/ente-server",
