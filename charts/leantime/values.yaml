@@ -1,53 +1,405 @@
-# Default values for leantime.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
-# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+# -- This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
-# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+# -- This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: nginx
-  # This sets the pull policy for images.
+  # -- We use the upstream leantime by default. Images are built from this repository: https://github.com/Leantime/docker-leantime
+  # NOTE: This might change as work started to move the configuration to the main repository.
+  repository: leantime/leantime
+  # -- Set to allow to easily change registry and in our case, mainly to support renovate regex (not required for the docker hub).
+  registry: docker.io
+  # -- This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
-# This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+# -- This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
-# This is to override the chart name.
+# -- This is to override the chart name.
 nameOverride: ""
+# -- This is to override the Helm Release name + the chart name.
 fullnameOverride: ""
 
-# This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+# -- Container [EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envvar-v1-core) object
+# Use it to override single values. Takes precedence over envFrom* values.
+env: {}
+  # - name: LEAN_DB_USER
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: dbUser
+  # - name: LEAN_DB_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: dbPassword
+  # - name: LEAN_SESSION_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: sessionPassword
+  # - name: LEAN_S3_KEY
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: s3Key
+  # - name: LEAN_S3_SECRET
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: s3Secret
+  # - name: LEAN_EMAIL_SMTP_USERNAME
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: smtpUsername
+  # - name: LEAN_EMAIL_SMTP_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: smtpPassword
+  # - name: LEAN_OIDC_CLIENT_ID
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: oidcClientID
+  # - name: LEAN_OIDC_CLIENT_SECRET
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: oidClientSecret
+  # - name: LEAN_REDIS_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: redisPassword
+
+# -- This is the default configuration passed to Leantime via environment variables.
+# In principle any sensitive value should be provided via `envFronSecret.data`, or via an externally
+# managed secret mapped to the environment via `env[].valueFrom.secretKeyRef`
+# NOTE: Any variable overlap from the envFromSecret.data section takes precedence over those defined here.
+envFromConfigMap:
+  # -- Defines if we include this in leantime
+  enabled: true
+  # -- The name of an existing ConfigMap to use with `configMapRef.name`.
+  # If this is not empty, we will NOT create the resource with the values defined in data.
+  existingConfigMap: ""
+  # -- Sets the configMap name
+  cmName: '{{ include "leantime.fullname" . }}-env'
+  # -- Additional labels to add to the generated ConfigMap
+  cmLabels: {}
+  # -- Additional annotations to add to the generated ConfigMap
+  cmAnnotations: {}
+  # -- The default contents for configMap. Based on
+  # [Leantime's sample.env](https://github.com/Leantime/docker-leantime/blob/master/sample.env)
+  # Values support helm templating.
+  data:
+    # -- Base URL, needed for subfolder or proxy installs (including http:// or https://)
+    # You can either modify this string or override (preferred) with `envVarOverrides.appUrl`
+    # @default The value of ingress.hosts[0].host if ingress is enabled.
+    LEAN_APP_URL: '{{ include "leantime.appUrl" . }}'
+    # -- Debug flag.
+    LEAN_DEBUG: "0"
+    # -- Whether to allow telemetry. If `false`, this will disable the telemetry submission and remove your unique instance id.
+    LEAN_ALLOW_TELEMETRY: false
+    # -- Database host
+    LEAN_DB_HOST: '{{ include "leantime.db.host" . }}'
+    # -- Database name
+    LEAN_DB_DATABASE: '{{ include "leantime.db.name" . }}'
+    # -- Database port
+    LEAN_DB_PORT: "3306"
+
+    # -- How many seconds after inactivity should we logout?  28800seconds = 8hours
+    LEAN_SESSION_EXPIRATION: "28800"
+    # -- Serve cookies via https only? Set to true when using https, set to false when using http.
+    # NOTE: If you're terminating TLS at the ingress, leave `false`!
+    LEAN_SESSION_SECURE: "false"
+
+    ## Optional Configuration, you may omit these from your .env file
+    ## Default Settings
+    # -- Name of your site, can be changed later
+    LEAN_SITENAME: "Leantime"
+    # -- Default language
+    LEAN_LANGUAGE: "en-US"
+    # -- Set default timezone
+    LEAN_DEFAULT_TIMEZONE: "America/Los_Angeles"
+    # -- Default Log Path (including filename), if not set /logs/error.log will be used
+    LEAN_LOG_PATH: ""
+    # -- If true then don't show the login form (useful only if additional auth method[s] are available)
+    LEAN_DISABLE_LOGIN_FORM: "false"
+
+    ## Look & Feel, these settings are available in the UI and can be overwritten there.
+    # -- Default logo path, can be changed later
+    LEAN_LOGO_PATH: "/dist/images/logo.svg"
+    # -- Default logo URL use for printing (must be jpg or png format)
+    LEAN_PRINT_LOGO_URL: "/dist/images/logo.png"
+    # -- Default theme
+    LEAN_DEFAULT_THEME: "default"
+    # -- Primary Theme color
+    LEAN_PRIMARY_COLOR: "#006d9f"
+    # -- Secondary Theme Color
+    LEAN_SECONDARY_COLOR: "#00a886"
+
+    ## Fileuploads
+    # -- Local relative path to store uploaded files (if not using S3)
+    LEAN_USER_FILE_PATH: "userfiles/"
+    # -- Local relative path to store backup files, need permission to write (used if not using S3)
+    LEAN_DB_BACKUP_PATH: "backupdb/"
+
+    # -- S3 File Uploads. If enabled, use s3 instead of local files.
+    # NOTE: If true, make sure to set `LEAN_S3_KEY` and `LEAN_S3_SECRET` in the env or `envFromSecret.data`
+    LEAN_USE_S3: "false"
+    # -- Your S3 bucket
+    LEAN_S3_BUCKET: ""
+    # -- Sets the endpoint style: false => https://[bucket].[endpoint]; true => https://[endpoint]/[bucket]
+    LEAN_S3_USE_PATH_STYLE_ENDPOINT: "true"
+    # -- S3 region
+    LEAN_S3_REGION: ""
+    # -- Foldername within S3 (can be empty)
+    LEAN_S3_FOLDER_NAME: ""
+    # -- S3 EndPoint S3 Compatible (https://sfo2.digitaloceanspaces.com)
+    #LEAN_S3_END_POINT: null
+
+    ## Email
+    # -- Return email address, needs to be valid email address format
+    LEAN_EMAIL_RETURN: ""
+    # --Use SMTP? If set to false, the default php mail() function will be used
+    # NOTE: If true, make sure to set `LEAN_EMAIL_SMTP_USERNAME` and `LEAN_EMAIL_SMTP_PASSWORD` in the env or `envFromSecret.data`
+    LEAN_EMAIL_USE_SMTP: "false"
+    # -- SMTP host. e.g. `smtp.gmail.com`
+    LEAN_EMAIL_SMTP_HOSTS: ""
+    # -- SMTP authentication required
+    LEAN_EMAIL_SMTP_AUTH: "true"
+    # -- SMTP Enable TLS encryption automatically if a server supports it
+    LEAN_EMAIL_SMTP_AUTO_TLS: "true"
+    # -- SMTP Security protocol (usually one of: TLS, SSL, STARTTLS)
+    LEAN_EMAIL_SMTP_SECURE: "STARTTLS"
+    # -- SMTP Allow insecure SSL: Don't verify certificate, accept self-signed, etc.
+    LEAN_EMAIL_SMTP_SSLNOVERIFY: "false"
+    # -- Port (usually one of 25, 465, 587, 2526)
+    LEAN_EMAIL_SMTP_PORT: "587"
+
+    ## LDAP
+    # -- Set to true if you want to use LDAP
+    LEAN_LDAP_USE_LDAP: "false"
+    # -- Domain name after username@ so users can login without domain definition
+    LEAN_LDAP_LDAP_DOMAIN: ""
+    # -- Select the correct directory type. Currently Supported: OL - OpenLdap, AD - Active Directory
+    LEAN_LDAP_LDAP_TYPE: "OL"
+    # -- FQDN
+    LEAN_LDAP_HOST: ""
+    # -- Default Port
+    LEAN_LDAP_PORT: "389"
+    # -- LDAP URI as alternative to hostname and port. Uses ldap://hostname:port
+    LEAN_LDAP_URI: ""
+    # Location of users, example: CN=users,DC=example,DC=com
+    LEAN_LDAP_DN: ""
+    # -- Leantime->Ldap attribute mapping
+    # For AD use these default attributes
+    # `{\"username\":\"cn\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"givenName\",\"lastname\":\"sn\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\"\"jobLevel\":\"level\"\"department\":\"department\"}`
+    LEAN_LDAP_KEYS: "{\"username\":\"uid\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"displayname\",\"lastname\":\"\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\"\"jobLevel\":\"level\"\"department\":\"department\"}"
+    # -- Default Leantime Role on creation. (set to editor)
+    LEAN_LDAP_DEFAULT_ROLE_KEY: "20;"
+    # -- Default role assignments upon first login.
+    # optional - Can be updated later in user settings for each user
+    LEAN_LDAP_GROUP_ASSIGNMENT: "{\"5\":{\"ltRole\":\"readonly\",\"ldapRole\":\"readonly\"},\"10\":{\"ltRole\":\"commenter\",\"ldapRole\":\"commenter\"},\"20\":{\"ltRole\":\"editor\",\"ldapRole\":\"editor\"},\"30\":{\"ltRole\":\"manager\",\"ldapRole\":\"manager\"},\"40\":{\"ltRole\":\"admin\",\"ldapRole\":\"administrators\"},\"50\":{\"ltRole\":\"owner\",\"ldapRole\":\"administrators\"}}"
+
+    ## OpenID Connect
+    # -- Use to enable or disable OpenID Connect.
+    # NOTE: If true, make sure to set `LEAN_OIDC_CLIENT_ID` and `LEAN_OIDC_CLIENT_SECRET` in the env or `envFromSecret.data`
+    LEAN_OIDC_ENABLE: "false"
+    # -- required - the URL for your provider (examples value for GitHub)
+    # Change if using another provider!
+    LEAN_OIDC_PROVIDER_URL: "https://token.actions.githubusercontent.com/"
+   # -- If true, it creates the User in Leantime db if it doesn't exist, otherwise (if false) fails login
+    LEAN_OIDC_CREATE_USER: "false"
+
+    # Default role for users created via OIDC (20 is editor)
+    LEAN_OIDC_DEFAULT_ROLE: "20"
+
+    # optional - these will be read from the well-known configuration if possible
+    #LEAN_OIDC_AUTH_URL_OVERRIDE: ""
+    #LEAN_OIDC_TOKEN_URL_OVERRIDE: ""
+    #LEAN_OIDC_JWKS_URL_OVERRIDE: ""
+    #LEAN_OIDC_USERINFO_URL_OVERRIDE: ""
+
+    # optional - override the public key for RSA validation
+    #LEAN_OIDC_CERTIFICATE_STRING: ""
+    #LEAN_OIDC_CERTIFICATE_FILE: ""
+
+    # optional - override the requested scopes
+    #LEAN_OIDC_SCOPES: ""
+
+    # optional - override the keys used for these fields
+    #LEAN_OIDC_FIELD_EMAIL: ""
+    #LEAN_OIDC_FIELD_FIRSTNAME: ""
+    #LEAN_OIDC_FIELD_LASTNAME: ""
+    #LEAN_OIDC_FIELD_PHONE: ""
+    #LEAN_OIDC_FIELD_JOBTITLE: ""
+    #LEAN_OIDC_FIELD_JOBLEVEL=
+    #LEAN_OIDC_FIELD_DEPARTMENT: ""
+
+    ## OpenID Connect setting for GitHub
+    #LEAN_OIDC_PROVIDER_URL: "https://token.actions.githubusercontent.com/"
+    #LEAN_OIDC_AUTH_URL_OVERRIDE: "https://github.com/login/oauth/authorize"
+    #LEAN_OIDC_TOKEN_URL_OVERRIDE: "https://github.com/login/oauth/access_token"
+    #LEAN_OIDC_USERINFO_URL_OVERRIDE: "https://api.github.com/user,https://api.github.com/user/emails"
+    #LEAN_OIDC_SCOPES: "user:email,read:user"
+    #LEAN_OIDC_FIELD_EMAIL: "0.email"
+    #LEAN_OIDC_FIELD_FIRSTNAME: "name"
+
+
+    ## Redis
+    # -- Set to true to use redis as for session storage and cache
+    # If enabled, and if not using a password, either set `LEAN_REDIS_URL` below or the other
+    # values. If using a password, please set the env `LEAN_REDIS_URL` or use the `envVarFromSecret.data`
+    LEAN_USE_REDIS: "false"
+    # -- Redis full URL. e.g. `tcp://1.2.3.4:6379`. If you are using a password, add ?auth=your-password to your URL
+    LEAN_REDIS_URL: ""
+    # -- The Redis host
+    LEAN_REDIS_HOST: ""
+    # -- The Redis port
+    LEAN_REDIS_PORT: "6379"
+    # -- The Redis scheme for phpredis. Can be `tcp` or `tls`.
+    LEAN_REDIS_SCHEME: ""
+
+    ## Rate limiting per minute
+    # -- General rate limiting per minute for all requests, calculated per a combo of IP and session or anonymous user
+    LEAN_RATELIMIT_GENERAL: "1000"
+    # -- API rate limiting per minute, calculated per a combo of IP and session or anonymous user
+    LEAN_RATELIMIT_API: "10"
+    # -- Login rate limiting per minute, calculated per a combo of IP and session or anonymous user
+    LEAN_RATELIMIT_AUTH: "20"
+
+# -- This is the default configuration passed to Leantime via environment variables.
+# Variables here take precedence over envFromConfigMap.
+envFromSecret:
+  # -- Defines if we include a secret as envFrom in the leantime container.
+  enabled: true
+  # -- The name of an existing Secret to use with `secretRef.name`.
+  # If this is not empty, we will NOT create the resource with the values defined in data.
+  # So if you have your own secret, set it here and make sure it has all required variables set.
+  # NOTE: Required variables are basically every one listed in the data section.
+  existingSecret: ""
+  # -- If existingSecret is empty, we'll create a secret whose name is defined with this entry.
+  # Supports templating.
+  secretName: '{{ include "leantime.fullname" . }}-env'
+  # -- Force regeneration of dynamically set values in the secret
+  regenerate: false
+  # -- Additional labels to add to the generated secret
+  secretLabels: {}
+  # -- Additional annotations to add to the generated secret
+  secretAnnotations: {}
+  # -- The default contents for Secret. Based on
+  # [Leantime's sample.env](https://github.com/Leantime/docker-leantime/blob/master/sample.env)
+  # and used for sensitive details. Values here are all empty string and should be used only if
+  # overriding auto-generation.
+  data:
+    # -- Database username. If you are not using mariadb and prefer to set this value with `valueFrom.secretKeyRef`,
+    # you can leave this value empty or comment the variable out. There is no need to use the `envVarOverride.dbUser`
+    # in that case.
+    LEAN_DB_USER: '{{ include "leantime.db.user" . }}'
+    # -- Database password. If you are not using mariadb and prefer to set this value with `valueFrom.secretKeyRef`,
+    # you can leave this value empty or comment the variable out. There is no need to use the `envVarOverride.dbPassword`
+    # in that case.
+    LEAN_DB_PASSWORD: '{{ include "leantime.db.password" . }}'
+    # -- Session Management. Salting sessions. If empty, it will be generated.
+    LEAN_SESSION_PASSWORD: '{{ include "leantime.secrets.generateKey" (dict "length" 32) }}'
+
+    # -- The S3 key. If S3 is enabled, either set here or better still, use the .env object and a separate secret.
+    LEAN_S3_KEY: ""
+    # -- S3 Secret. If S3 is enabled, either set here or better still, use the .env object and a separate secret
+    LEAN_S3_SECRET: ""
+
+    # -- SMTP username. If LEAN_EMAIL_USE_SMTP is `true`, either set this here or better still
+    # use the .env object and a separate secret.
+    LEAN_EMAIL_SMTP_USERNAME: ""
+    # -- SMTP password. If LEAN_EMAIL_USE_SMTP is `true`, either set this here or better still
+    # use the .env object and a separate secret.
+    LEAN_EMAIL_SMTP_PASSWORD: ""
+
+    # -- The OIDC client_id.
+    # Required if LEAN_OIDC_ENABLE is `true`.
+    # Client ID identifies the client in OAuth exchanges (including the authorization request).
+    # If OpenID COnnect is enabled, either set here or better still, use the .env object and a separate secret
+    LEAN_OIDC_CLIENT_ID: ""
+    # -- The OIDC ClientID. See https://www.oauth.com/oauth2-servers/client-registration/client-id-secret/
+    # Required if LEAN_OIDC_ENABLE is `true`.
+    # Client Secret validates the client in secret-authenticated flows, such as exchanging the authorization code for an ID Token and access token.
+    # If OpenID COnnect is enabled, either set here or better still, use the .env object and a separate secret
+    LEAN_OIDC_CLIENT_SECRET: ""
+
+    # -- The Redis password
+    # Required if not using setting Redis URL (and of course, if used with your Redis host)
+    # If Redis is enabled, either set here or better still, use the .env object and a separate secret
+    LEAN_REDIS_PASSWORD: ""
+    # -- Redis full URL. e.g. `tcp://1.2.3.4:6379`. If you are using a password, add ?auth=your-password to your URL
+    # If Redis is enabled, either set here or better still, use the .env object and a separate secret
+    LEAN_REDIS_URL: ""
+
+# -- This dictionary holds particular env var overrides used with variables set
+# with envFrom*. These might be required
+# depending on other values or places where they're set but they will be overridden
+# in the actual environment by any defined variable in `env`
+envVarOverrides:
+  # -- Sets Leantime URL, needed for subfolder or proxy installs (including http:// or https://)
+  # Required if ingress is not set.
+  appUrl: ""
+  # -- Sets Leantime DB Host, needed for subfolder or proxy installs (including http:// or https://)
+  # Required if ingress is not set and still using a proxy (e.g. svc of type LoadBalancer)
+  dbHost: ""
+  # -- The name of the database to use.
+  # If mariadb is enabled we'll use the db name defined there, else "leantime"
+  dbName: ""
+  # -- The name of the user for the database.
+  # If mariadb is enabled we'll use the user name defined there, else "leantime"
+  dbUsername: ""
+  # -- The password for the user to access the leantime database.
+  # If mariadb is enabled we'll use the password defined there, else "leantime"
+  dbPassword: ""
+
+# -- This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
 serviceAccount:
-  # Specifies whether a service account should be created
+  # -- Specifies whether a service account should be created
   create: true
-  # Automatically mount a ServiceAccount's API credentials?
+  # -- Automatically mount a ServiceAccount's API credentials?
   automount: true
-  # Annotations to add to the service account
+  # -- Annotations to add to the service account
   annotations: {}
-  # The name of the service account to use.
+  # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-# This is for setting Kubernetes Annotations to a Pod.
+# -- This is for setting Kubernetes Annotations to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
 podAnnotations: {}
-# This is for setting Kubernetes Labels to a Pod.
+# -- This is for setting Kubernetes Labels to a Pod.
 # For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
 podLabels: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+# -- Pod level
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: "RuntimeDefault"
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+# -- Leantime container level
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+    # add:
+    # - CAP_CHOWN
+    # - CAP_SETGID
+    # - CAP_SETUID
+  readOnlyRootFilesystem: false
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
@@ -73,10 +425,33 @@ ingress:
   #    hosts:
   #      - chart-example.local
 
+# -- A single volume will be used with both 'userfiles' for /var/www/userfiles,
+# and 'public-userfiles' for /var/www/public/userfiles
+persistence:
+  # -- Enable persistent storage for user files. Unless claim is enabled or we have an existing claim,
+  # we'll use an emptyDir, which is kind of persistence.
+  # NOTE: If you're using S3, no need to use persistence.
+  enabled: false
+  # -- If not empty, it will use this existing Persistent Volume Claim
+  existingClaim: ""
+  # -- If existingClaim is empty and persistence is enabled, when `claim.enabled`is `true`
+  # we'll create a pvc based on these details
+  claim:
+    # --If false, we'll use an emptyDir
+    enabled: true
+    # -- Requested size
+    size: 5Gi
+    # -- See [accessMode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)
+    accessMode: ReadWriteOnce
+    ## Persistent Volume storage class
+    storageClass: ""
+    ## Annotations to add to the Persistent Volume Claim
+    annotations: {}
+
+# -- We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user.
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # If you do want to specify resources, uncomment the following
   # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
   # limits:
   #   cpu: 100m
@@ -85,7 +460,7 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# -- This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 livenessProbe:
   httpGet:
     path: /
@@ -95,7 +470,7 @@ readinessProbe:
     path: /
     port: http
 
-# This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+# -- This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
   enabled: false
   minReplicas: 1
@@ -103,21 +478,70 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
-# Additional volumes on the output Deployment definition.
+# -- Additional volumes on the output Deployment definition.
 volumes: []
 # - name: foo
 #   secret:
 #     secretName: mysecret
 #     optional: false
 
-# Additional volumeMounts on the output Deployment definition.
+# -- Additional volumeMounts on the output Deployment definition.
 volumeMounts: []
 # - name: foo
 #   mountPath: "/etc/foo"
 #   readOnly: true
 
+# -- Values to pass to the mariadb sub-chart.
+# See <https://github.com/bitnami/charts/tree/main/bitnami/mariadb>
+# NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section
+# and you should use something different for production (e.g. mariadb-operator).
+# Included here for convenience but not recommended for production (see examples for a production configuration)
+mariadb:
+  # -- In "production-like" environments you should modify the values below or better still,
+  # run one an external DB or use the MariaDB operator.
+  enabled: true
+  image:
+    # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+    repository: bitnamilegacy/mariadb
+  # -- auth contains details the user, database and credentials used by leantime
+  # If modifying this section, make sure to sync leantime database credentials to match
+  auth:
+    # -- Only set the existing secret if you have provided your own with the required fields:
+    # `mariadb-root-password`, `mariadb-replication-password` and `mariadb-password` and passed
+    # the `LEAN_DB_PASSWORD` var to Leantime via env or envFromSecret as well.
+    existingSecret: ""
+    # -- Name for the Leantime database to create
+    database: leantime
+    # -- Name for the Leantime user to create
+    username: leantime
+    # -- Password for the Leantime user
+    password: "changeme!"
+  # -- Primary values if different from defaults.
+  # NOTE: persistence is enabled by default so with a request of 8Gi
+  primary: {}
+  # -- Secondary values if different from defaults
+  # NOTE: persistence is enabled by default so with a request of 8Gi
+  Secondary: {}
+
+# -- Pod [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector)
 nodeSelector: {}
 
+# -- Pod [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
 tolerations: []
 
+# -- Pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
 affinity: {}
+
+# -- A list of extra Kubernetes resources to be deployed with the chart.
+# This can be used to deploy resources like ExternalSecrets or other custom resources.
+extraResources: []
+#  - apiVersion: v1
+#    kind: Service
+#    metadata:
+#      name: my-extra-service
+#    spec:
+#      ports:
+#      - port: 80
+#        targetPort: 8080
+#      selector:
+#        app: my-app

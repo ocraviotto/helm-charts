@@ -15,10 +15,11 @@ If release name contains chart name it will be used as a full name.
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- $releaseName := regexReplaceAll "(-?[^a-z\\d\\-])+-?" (lower .Release.Name) "-" -}}
+{{- if contains $name $releaseName }}
+{{- $releaseName | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- printf "%s-%s" $releaseName $name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -59,4 +60,17 @@ Create the name of the service account to use
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
+{{- end }}
+
+{{/*
+Render the LEAN_APP_URL value
+*/}}
+{{- define "leantime.appUrl" -}}
+  {{- if not .Values.ingress.enabled }}
+    {{- printf "%s" (.Values.envVarOverrides.appUrl | default (include "leantime.db.host" .) ) }}
+  {{- else }}
+    {{- $proto := ternary "https" "http" $.Values.ingress.tls }}
+    {{- $noOverride := printf "%s://%s" $proto (index .Values.ingress.hosts 0).host }}
+    {{- .Values.envVarOverrides.appUrl | default $noOverride }}
+  {{- end }}
 {{- end }}

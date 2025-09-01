@@ -1,0 +1,159 @@
+---
+# Example values file that uses external MinIO and PostgreSQL (assuming PGO, the CrunchyData postgres operator)
+# along externalSecrets, certManager (TLS for Museum) with service of type loadBalancer,
+# and an ingress controller object for web apps with also TLS and externalDNS
+
+baseDomain: ente.myexample.com
+
+museum:
+  replicaCount: 1
+  service:
+    type: LoadBalancer
+    port: 443
+    annotations:
+      external-dns.alpha.kubernetes.io/hostname: api.ente.myexample.com # Make sure to match the baseDomain
+
+  extraEnvFromSecret:
+    - postgres-ente-env
+
+  tls:
+    enabled: true
+    secretName: "ente-wildcard" # This needs to exist. In this example it is created via external secret
+
+  config:
+    internal:
+      health-check-url: "https://hel1.your-objectstorage.com"
+      admins: []
+    replication:
+      enabled: true
+      worker-count: 4
+
+web:
+  replicaCount: 1
+  config:
+    nodeEnv: production
+
+ingress:
+  web:
+    enabled: true
+    className: "contour"
+    annotations:
+      ingress.kubernetes.io/force-ssl-redirect: "true"
+      projectcontour.io/response-timeout: 600s
+    tls:
+      - secretName: ente-wildcard
+
+enteCredentials:
+  existingSecret: "museum-credentials"
+
+postgresql:
+  enabled: false
+
+minio:
+  enabled: false
+
+minioSetup:
+  enabled: false
+
+extraResources:
+  # RoleBinding that will allow the SecretStore
+  # serviceAccount permission to push the secret to ente from pgo
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      namespace: ente
+      name: eso-store-push-binding
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: eso-store-push-role
+    subjects:
+    - kind: ServiceAccount
+      name: eso-store-push
+      namespace: pgo
+  # SecretStore that will push to ente
+  - apiVersion: external-secrets.io/v1
+    kind: SecretStore
+    metadata:
+      name: pgo-ente-db-credentials
+      namespace: pgo
+    spec:
+      provider:
+        kubernetes:
+          remoteNamespace: ente
+          server:
+            caProvider:
+              type: ConfigMap
+              name: kube-root-ca.crt
+              key: ca.crt
+          auth:
+            serviceAccount:
+              name: eso-store-push
+  - apiVersion: external-secrets.io/v1alpha1
+    kind: PushSecret
+    metadata:
+      name: postgres-ente-env
+      namespace: pgo
+    spec:
+      refreshInterval: 1h
+      secretStoreRefs:
+        - name: pgo-ente-db-credentials
+          kind: SecretStore
+      selector:
+        secret:
+          name: postgres-pguser-ente
+      data:
+      - match:
+          secretKey: host
+          remoteRef:
+            remoteKey: postgres-ente-env
+            property: ENTE_DB_HOST
+      - match:
+          secretKey: port
+          remoteRef:
+            remoteKey: postgres-ente-env
+            property: ENTE_DB_PORT
+      - match:
+          secretKey: dbname
+          remoteRef:
+            remoteKey: postgres-ente-env
+            property: ENTE_DB_NAME
+      - match:
+          secretKey: user
+          remoteRef:
+            remoteKey: postgres-ente-env
+            property: ENTE_DB_USER
+      - match:
+          secretKey: password
+          remoteRef:
+            remoteKey: postgres-ente-env
+            property: ENTE_DB_PASSWORD
+  - # Secret to mount as credentials.yaml
+    # see museum-credentials.yaml
+    apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: museum-credentials
+      namespace: ente
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: vault-backend-mycluster
+      dataFrom:
+        - extract:
+            key: /mycluster/ente/museum-credentials
+  - apiVersion: cert-manager.io/v1
+    kind: Certificate
+    metadata:
+      name: ente-wildcard
+      namespace: ente
+    spec:
+      commonName: "*.ente.myexample.com" # Make sure it's based on the baseDomain
+      dnsNames:
+      - "ente.myexample.com"
+      - "*.ente.myexample.com"
+      issuerRef:
+        name: letsencrypt
+        kind: ClusterIssuer
+      secretName: ente-wildcard

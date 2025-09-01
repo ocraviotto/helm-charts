@@ -3,6 +3,10 @@
         "allowlist": {
             "allow": [
                 "postgresql",
+                "leantime",
+                "mariadb",
+                "bitnami",
+                "subchart",
                 "/===IGNORE===[\\s\\S]*?===\/IGNORE===/m"
             ]
         },
