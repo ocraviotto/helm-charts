@@ -316,7 +316,7 @@ enteCredentials:
 podAnnotations: {}
 
 # -- Default pod level
-# [securityContenxt](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod)
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod)
 # used with both web and museum.
 # Can be overwritten by setting museum.podSecurityContext or web.podSecurityContext.
 podSecurityContext:
@@ -324,12 +324,12 @@ podSecurityContext:
     type: "RuntimeDefault"
 
 # -- Default Container level
-# [securityContenxt](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container)
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container)
 # used with both web and museum
 # Can be overwritten with museum.securityContext or web.securityContext.
-# These are more generous than the permissions we default to for the server (museum) and the web applications separately,
+# These are more generous than the permissions we default for the server (museum) and the web applications separately,
 # and are here for reference, as they are used if the web or museum versions are not provided.
-# Web needs to modify js files on startup does some other changes (nginx docker-entrypoint)
+# Web needs to modify js files on startup and does some other changes (nginx docker-entrypoint)
 # NET_BIND_SERVICE is required when running with TLS by the museum API
 # Both write to the FS outside the mounted points
 securityContext:
@@ -346,28 +346,38 @@ securityContext:
   readOnlyRootFilesystem: false
 
 # -- Included PostgreSQL configuration
+# NOTE: Because of https://github.com/bitnami/charts/issues/35164 there will be more changes to this section
 postgresql:
   # -- In "production-like" environments you should modify the values below or better still,
   # run one of Crunchy Postgres Operator (PGO) or CloudNativePG
   enabled: true
-  # Values to pass to the postgresql sub-chart.
+  # -- Values to pass to the postgresql sub-chart.
   # See <https://github.com/bitnami/charts/tree/main/bitnami/postgresql>
+  image:
+    # -- Required because of https://github.com/bitnami/charts/issues/35164
+    repository: bitnamilegacy/mariadb
   auth:
     database: ente_db
     username: pguser
     password: "changeme"
-  primary:
-    persistence:
-      enabled: true
-      size: 8Gi
+  # -- Primary values if different from defaults.
+  # NOTE: persistence is enabled by default so with a request of 8Gi
+  primary: {}
+  # -- Secondary values if different from defaults
+  # NOTE: persistence is enabled by default so with a request of 8Gi
+  Secondary: {}
 
 # -- Included MinIO configuration
+# NOTE: Because of https://github.com/bitnami/charts/issues/35164 there will be more changes to this section
 minio:
   # -- In "production-like" environments you should modify the mino values if enabled
   # or even better, run MinIO via its own operator.
   enabled: true
   # -- Values to pass to the minio sub-chart.
   # See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
+  image:
+    # -- Required because of https://github.com/bitnami/charts/issues/35164
+    repository: bitnamilegacy/minio
   auth:
     # In production you should consider using an existingSecret or pass these via the cli instead of setting clear values below
     rootUser: changeme
