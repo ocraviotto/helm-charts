@@ -6,5 +6,16 @@
         "markdown",
         "latex",
         "plaintext"
+    ],
+    "cSpell.words": [
+        "bitnami",
+        "leantime",
+        "Leantime",
+        "mariadb",
+        "nginx",
+        "postgresql",
+        "subchart",
+        "userfiles",
+        "Valkey"
     ]
 }

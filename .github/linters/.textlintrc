@@ -2,7 +2,17 @@
     "filters": {
         "allowlist": {
             "allow": [
-                "postgresql",
+                "/github/i",
+                "/postgresql/i",
+                "/leantime/i",
+                "/mariadb/i",
+                "/bitnami/i",
+                "/subchart/i",
+                "/mysql/i",
+                "/redis/i",
+                "/dragonfly/i",
+                "/Valkey/i",
+                "/userfiles/i",
                 "/===IGNORE===[\\s\\S]*?===\/IGNORE===/m"
             ]
         },

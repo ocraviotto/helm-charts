@@ -1,6 +1,6 @@
 # Ente Helm Chart
 
-![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.20250823-80.1](https://img.shields.io/badge/AppVersion-0.0.20250823--80.1-informational?style=flat-square)
+![Version: 0.1.7](https://img.shields.io/badge/Version-0.1.7-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.20250823-80.1](https://img.shields.io/badge/AppVersion-0.0.20250823--80.1-informational?style=flat-square)
 
 This is a Helm chart for [Ente](https://ente.io), a simple, encrypted, and self-hostable photo and video storage solution.
 
@@ -25,7 +25,7 @@ If using the included PostgreSQL and/or MinIO:
 To install the chart with the release name `home-ente`:
 
 ```bash
-helm install home-ente oci://ghcr.io/ocraviotto/charts/ente --version 0.1.5
+helm install home-ente oci://ghcr.io/ocraviotto/charts/ente --version 0.1.7
 ```
 
 ## Uninstalling the Chart
@@ -46,7 +46,7 @@ Make sure to check it out if intending on a more serious use of Ente.
 | Repository | Name | Version |
 |------------|------|---------|
 | oci://registry-1.docker.io/bitnamicharts | minio | 17.0.21 |
-| oci://registry-1.docker.io/bitnamicharts | postgresql | 16.7.26 |
+| oci://registry-1.docker.io/bitnamicharts | postgresql | 16.7.27 |
 
 ## Values
 
@@ -73,9 +73,10 @@ Make sure to check it out if intending on a more serious use of Ente.
 | ingress.web.path | string | `"/"` | Default path match used with all hosts |
 | ingress.web.pathType | string | `"ImplementationSpecific"` | Default pathType for path matching |
 | ingress.web.tls | list | `[]` | [IngressTLS list](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#ingresstls-v1-networking-k8s-io) Required for the web ingress |
-| minio | object | `{"auth":{"rootPassword":"changeme1234","rootUser":"changeme"},"enabled":true,"persistence":{"enabled":true,"size":"10Gi"}}` | Included MinIO configuration |
-| minio.auth | object | `{"rootPassword":"changeme1234","rootUser":"changeme"}` | Values to pass to the minio sub-chart. See <https://github.com/bitnami/charts/tree/main/bitnami/minio> |
+| minio | object | `{"auth":{"rootPassword":"changeme1234","rootUser":"changeme"},"enabled":true,"image":{"repository":"bitnamilegacy/minio"},"persistence":{"enabled":true,"size":"10Gi"}}` | Included MinIO configuration NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section |
 | minio.enabled | bool | `true` | In "production-like" environments you should modify the mino values if enabled or even better, run MinIO via its own operator. |
+| minio.image | object | `{"repository":"bitnamilegacy/minio"}` | Values to pass to the minio sub-chart. See <https://github.com/bitnami/charts/tree/main/bitnami/minio> |
+| minio.image.repository | string | `"bitnamilegacy/minio"` | Required because of <https://github.com/bitnami/charts/issues/35164> |
 | minio.persistence | object | `{"enabled":true,"size":"10Gi"}` | [MinIO® Persistence parameters](https://github.com/bitnami/charts/tree/main/bitnami/minio#minio-persistence-parameters) |
 | minio.persistence.enabled | bool | `true` | Enable MinIO® data persistence using PVC. If false, use emptyDir |
 | minio.persistence.size | string | `"10Gi"` | PVC Storage Request for MinIO® data volume |
@@ -105,10 +106,14 @@ Make sure to check it out if intending on a more serious use of Ente.
 | museum.tolerations | list | `[]` | Web Pod [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) |
 | nameOverride | string | `""` | When set, used instead of the name of the chart in the Chart.yaml file |
 | podAnnotations | object | `{}` | Pod annotations used with both web and museum Can be overwritten with museum.podAnnotations or web.podAnnotations. |
-| podSecurityContext | object | `{"seccompProfile":{"type":"RuntimeDefault"}}` | Default pod level [securityContenxt](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod) used with both web and museum. Can be overwritten by setting museum.podSecurityContext or web.podSecurityContext. |
-| postgresql | object | `{"auth":{"database":"ente_db","password":"changeme","username":"pguser"},"enabled":true,"primary":{"persistence":{"enabled":true,"size":"8Gi"}}}` | Included PostgreSQL configuration |
+| podSecurityContext | object | `{"seccompProfile":{"type":"RuntimeDefault"}}` | Default pod level [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod) used with both web and museum. Can be overwritten by setting museum.podSecurityContext or web.podSecurityContext. |
+| postgresql | object | `{"Secondary":{},"auth":{"database":"ente_db","password":"changeme","username":"pguser"},"enabled":true,"image":{"repository":"bitnamilegacy/postgresql"},"primary":{}}` | Included PostgreSQL configuration NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section |
+| postgresql.Secondary | object | `{}` | Secondary values if different from defaults NOTE: persistence is enabled by default so with a request of 8Gi |
 | postgresql.enabled | bool | `true` | In "production-like" environments you should modify the values below or better still, run one of Crunchy Postgres Operator (PGO) or CloudNativePG |
-| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"add":["CHOWN","DAC_OVERRIDE","NET_BIND_SERVICE","SETGID","SETUID"],"drop":["ALL"]},"readOnlyRootFilesystem":false}` | Default Container level [securityContenxt](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container) used with both web and museum Can be overwritten with museum.securityContext or web.securityContext. These are more generous than the permissions we default to for the server (museum) and the web applications separately, and are here for reference, as they are used if the web or museum versions are not provided. Web needs to modify js files on startup does some other changes (nginx docker-entrypoint) NET_BIND_SERVICE is required when running with TLS by the museum API Both write to the FS outside the mounted points |
+| postgresql.image | object | `{"repository":"bitnamilegacy/postgresql"}` | Values to pass to the postgresql sub-chart. See <https://github.com/bitnami/charts/tree/main/bitnami/postgresql> |
+| postgresql.image.repository | string | `"bitnamilegacy/postgresql"` | Required because of <https://github.com/bitnami/charts/issues/35164> |
+| postgresql.primary | object | `{}` | Primary values if different from defaults. NOTE: persistence is enabled by default so with a request of 8Gi |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"add":["CHOWN","DAC_OVERRIDE","NET_BIND_SERVICE","SETGID","SETUID"],"drop":["ALL"]},"readOnlyRootFilesystem":false}` | Default Container level [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container) used with both web and museum Can be overwritten with museum.securityContext or web.securityContext. These are more generous than the permissions we default for the server (museum) and the web applications separately, and are here for reference, as they are used if the web or museum versions are not provided. Web needs to modify js files on startup and does some other changes (nginx docker-entrypoint) NET_BIND_SERVICE is required when running with TLS by the museum API Both write to the FS outside the mounted points |
 | serviceAccount | object | `{"annotations":{},"create":false,"name":""}` | Create a separate serviceAccount for ente museum At the moment we |
 | web.affinity | object | `{}` | Web Pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) |
 | web.config | object | `{"enteAlbumsOrigin":"","enteApiOrigin":"","nodeEnv":"production"}` | Various convenience settings exposed as fields to manage web configuration |

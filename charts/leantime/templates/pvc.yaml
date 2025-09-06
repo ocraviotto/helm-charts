@@ -1,0 +1,19 @@
+{{- if and .Values.persistence.enabled .Values.persistence.claim.enabled (not .Values.persistence.existingClaim) -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "leantime.fullname" . }}
+  {{- with .Values.persistence.claim.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.claim.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.claim.size | quote }}
+  {{- with .Values.persistence.claim.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end -}}

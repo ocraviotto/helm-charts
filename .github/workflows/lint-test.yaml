@@ -53,7 +53,7 @@ jobs:
         if: steps.list-changed.outputs.changed == 'true'
 
       - name: Run chart-testing (install)
-        run: ct install --config .github/linters/ct.yaml
+        run: ct install --config .github/linters/ct.yaml --helm-extra-set-args "--set=testing.enabled=true"
 
   super-linter:
     name: Lint All
@@ -112,7 +112,7 @@ jobs:
       - name: Check for changes
         id: check
         run: |
-          if git diff --quiet; then
+          if git diff; then
             echo "no_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "no_changes=false" >> "$GITHUB_OUTPUT"

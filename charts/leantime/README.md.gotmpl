@@ -1,0 +1,56 @@
+# Ente Helm Chart
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+This is a Helm chart for [Leantime](https://leantime.io), a goals focused project management system for non-project managers.
+Building with ADHD, Autism, and dyslexia in mind.
+
+## Introduction
+
+This chart bootstraps an Leantime deployment on a Kubernetes cluster using the Helm package manager. It defaults to deploying MariaDB as dependency.
+Though the chart takes care of multiple aspects of Leantime's configuration, make sure to read the documentation, in particular in relation to the [configuration](https://docs.leantime.io/installation/configuration).
+
+## Prerequisites
+
+* Kubernetes 1.23+
+* Helm 3.8.0+
+
+### Additionally
+
+If using the included MariaDB and/or enabling persistence with claim enabled:
+
+* PV provisioner support in the underlying infrastructure
+
+## Installing the Chart
+
+To install the chart with the release name `home-ente`:
+
+```bash
+helm install leantime oci://ghcr.io/ocraviotto/charts/leantime --version {{ template "chart.version" . }}
+```
+
+## Uninstalling the Chart
+
+To uninstall/delete the `leantime` release:
+
+```bash
+helm delete leantime
+```
+
+## Example
+
+The [external-resources example](examples/external-resources) contains a modified values file to use with a more production-like environment.
+Make sure to check it out if intending on a more serious use of Leantime.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.valuesSection" . }}
