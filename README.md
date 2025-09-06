@@ -23,7 +23,8 @@ All Helm charts are located in the `charts/` directory. Each chart resides in it
 <!-- CHARTS_TABLE_START -->
 | Chart | Description | Version | Packages |
 |-------|-------------|---------|----------|
-| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.5 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fente) |
+| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.7 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fente) |
+| [leantime](charts/leantime/README.md) | A Helm chart for Kubernetes to deploy Leantime | 0.1.0 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fleantime) |
 <!-- CHARTS_TABLE_END -->
 
 ## Adding a New Chart
