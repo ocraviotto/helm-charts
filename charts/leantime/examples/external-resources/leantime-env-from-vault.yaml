@@ -1,0 +1,18 @@
+# Secret managed with externalSecrets. Details omitted and base64 encoded values decoded.
+kind: Secret
+apiVersion: v1
+metadata:
+  name: leantime-env-from-vault
+  namespace: leantime
+type: Opaque
+data:
+  LEAN_DB_USER: leantime
+  LEAN_DB_PASSWORD: my-password
+  LEAN_SESSION_PASSWORD: plbWLJiR0yZwUT7ORE7iCBzNHHWpfQYH
+  LEAN_S3_KEY: AKIAIOSFODNN7EXAMPLE
+  LEAN_S3_SECRET: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  LEAN_EMAIL_SMTP_USERNAME: no-reply@example.com
+  LEAN_EMAIL_SMTP_PASSWORD: "mdtr srsy lbed qztr"
+  #LEAN_OIDC_CLIENT_ID: ""
+  #LEAN_OIDC_CLIENT_SECRET: ""
+  LEAN_REDIS_PASSWORD: "my-great-password"

@@ -8,8 +8,12 @@ metadata:
     "helm.sh/hook": test
 spec:
   containers:
-    - name: wget
-      image: busybox
-      command: ['wget']
-      args: ['{{ include "leantime.fullname" . }}:{{ .Values.service.port }}']
+    - name: curl
+      image: curlimages/curl:8.9.1
+      command: ['sh', '-c']
+      args:
+        - >
+          code=$(curl -s -o /dev/null -w "%{http_code}" http://{{ include "leantime.fullname" . }}:{{ .Values.service.port }}/);
+          echo "Got HTTP $code";
+          if [ "$code" = "200" ] || [ "$code" = "303" ]; then exit 0; else exit 1; fi
   restartPolicy: Never

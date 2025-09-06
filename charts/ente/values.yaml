@@ -346,7 +346,7 @@ securityContext:
   readOnlyRootFilesystem: false
 
 # -- Included PostgreSQL configuration
-# NOTE: Because of https://github.com/bitnami/charts/issues/35164 there will be more changes to this section
+# NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section
 postgresql:
   # -- In "production-like" environments you should modify the values below or better still,
   # run one of Crunchy Postgres Operator (PGO) or CloudNativePG
@@ -354,8 +354,8 @@ postgresql:
   # -- Values to pass to the postgresql sub-chart.
   # See <https://github.com/bitnami/charts/tree/main/bitnami/postgresql>
   image:
-    # -- Required because of https://github.com/bitnami/charts/issues/35164
-    repository: bitnamilegacy/mariadb
+    # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+    repository: bitnamilegacy/postgresql
   auth:
     database: ente_db
     username: pguser
@@ -368,7 +368,7 @@ postgresql:
   Secondary: {}
 
 # -- Included MinIO configuration
-# NOTE: Because of https://github.com/bitnami/charts/issues/35164 there will be more changes to this section
+# NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section
 minio:
   # -- In "production-like" environments you should modify the mino values if enabled
   # or even better, run MinIO via its own operator.
@@ -376,7 +376,7 @@ minio:
   # -- Values to pass to the minio sub-chart.
   # See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
   image:
-    # -- Required because of https://github.com/bitnami/charts/issues/35164
+    # -- Required because of <https://github.com/bitnami/charts/issues/35164>
     repository: bitnamilegacy/minio
   auth:
     # In production you should consider using an existingSecret or pass these via the cli instead of setting clear values below

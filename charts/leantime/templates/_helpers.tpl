@@ -69,8 +69,21 @@ Render the LEAN_APP_URL value
   {{- if not .Values.ingress.enabled }}
     {{- printf "%s" (.Values.envVarOverrides.appUrl | default (include "leantime.db.host" .) ) }}
   {{- else }}
-    {{- $proto := ternary "https" "http" $.Values.ingress.tls }}
+    {{- $proto := ternary "https" "http" (gt (len $.Values.ingress.tls) 0) }}
     {{- $noOverride := printf "%s://%s" $proto (index .Values.ingress.hosts 0).host }}
     {{- .Values.envVarOverrides.appUrl | default $noOverride }}
   {{- end }}
 {{- end }}
+
+{{/*
+Create a checksum of all configuration.
+This is used to trigger a rolling update when the config changes.
+*/}}
+{{- define "leantime.checksum" -}}
+{{- $configMapData := .Values.envFromConfigMap.data -}}
+{{- $secretData := "" -}}
+{{- if and .Values.envFromSecret.enabled (not .Values.envFromSecret.existingSecret) -}}
+{{- $secretData = include "leantime.secrets.data" . -}}
+{{- end -}}
+{{- printf "%s%s" $configMapData $secretData | sha256sum -}}
+{{- end -}}

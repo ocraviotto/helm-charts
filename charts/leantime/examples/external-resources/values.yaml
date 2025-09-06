@@ -1,159 +1,144 @@
----
-# Example values file that uses external MinIO and PostgreSQL (assuming PGO, the CrunchyData postgres operator)
-# along externalSecrets, certManager (TLS for Museum) with service of type loadBalancer,
-# and an ingress controller object for web apps with also TLS and externalDNS
+envFromConfigMap:
+  data:
+    # mysql --host="$LEAN_DB_HOST" --user="$LEAN_DB_USER" --database="$LEAN_DB_DATABASE" --password="$LEAN_DB_PASSWORD" --port="$LEAN_DB_PORT" --ssl-ca="$LEAN_DB_MYSQL_ATTR_SSL_CA"
+    LEAN_DB_HOST: "maxscale-casa.mariadb.svc.cluster.local"
+    # Path to the CA certificate where we mount it
+    LEAN_DB_MYSQL_ATTR_SSL_CA: "/var/www/html/storage/mariadb-bundle/ca.crt"
+    # Make sure to require server TLS verification
+    LEAN_DB_MYSQL_ATTR_SSL_VERIFY_SERVER: "true"
+    LEAN_DEFAULT_TIMEZONE: "Europe/Helsinki"
 
-baseDomain: ente.myexample.com
+    LEAN_USE_S3: "true"
+    LEAN_S3_BUCKET: "leantime"
+    LEAN_S3_USE_PATH_STYLE_ENDPOINT: "true"
+    LEAN_S3_REGION: "us-east-1"
+    LEAN_S3_END_POINT: "https://minio.example.com"
 
-museum:
-  replicaCount: 1
-  service:
-    type: LoadBalancer
-    port: 443
-    annotations:
-      external-dns.alpha.kubernetes.io/hostname: api.ente.myexample.com # Make sure to match the baseDomain
+    LEAN_EMAIL_RETURN: "no-reply@example.com"
+    LEAN_EMAIL_USE_SMTP: "true"
+    LEAN_EMAIL_SMTP_HOSTS: "smtp.gmail.com"
 
-  extraEnvFromSecret:
-    - postgres-ente-env
+    LEAN_USE_REDIS: "true"
+    LEAN_REDIS_HOST: "leantime.dragonfly.svc.cluster.local"
+    LEAN_REDIS_PORT: "6379"
+    LEAN_REDIS_SCHEME: "tcp"
+    LEAN_REDIS_USERNAME: "leantime"
 
-  tls:
-    enabled: true
-    secretName: "ente-wildcard" # This needs to exist. In this example it is created via external secret
+envFromSecret:
+  # Enabled by default, this will require a secret "leantime-from-vault" with all variables
+  # not in the ConfigMap and normally included in this data object
+  existingSecret: leantime-env-from-vault
 
-  config:
-    internal:
-      health-check-url: "https://hel1.your-objectstorage.com"
-      admins: []
-    replication:
-      enabled: true
-      worker-count: 4
+# For the mariadb bundle
+volumes:
+  - name: mariadb-bundle
+    configMap:
+      name: mariadb-bundle
+      optional: false
 
-web:
-  replicaCount: 1
-  config:
-    nodeEnv: production
+volumeMounts:
+  - name: mariadb-bundle
+    # mariadb-bundle has a key ca.crt with the certificate bundle
+    mountPath: "/var/www/html/storage/mariadb-bundle"
+    readOnly: true
 
 ingress:
-  web:
-    enabled: true
-    className: "contour"
-    annotations:
-      ingress.kubernetes.io/force-ssl-redirect: "true"
-      projectcontour.io/response-timeout: 600s
-    tls:
-      - secretName: ente-wildcard
+  enabled: true
+  className: "contour"
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    projectcontour.io/tls-cert-namespace: projectcontour
+  hosts:
+    - host: &hostName leantime.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - hosts:
+        - *hostName
+      secretName: casa-wildcard
 
-enteCredentials:
-  existingSecret: "museum-credentials"
+resources:
+  limits:
+    cpu: 1
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
 
-postgresql:
+# Make sure the included mariadb chart is not enabled if using external!
+mariadb:
   enabled: false
 
-minio:
-  enabled: false
-
-minioSetup:
-  enabled: false
-
+# MariaDB Operator Resources + Dragonfly
 extraResources:
-  # RoleBinding that will allow the SecretStore
-  # serviceAccount permission to push the secret to ente from pgo
-  - apiVersion: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    metadata:
-      namespace: ente
-      name: eso-store-push-binding
-    roleRef:
-      apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: eso-store-push-role
-    subjects:
-    - kind: ServiceAccount
-      name: eso-store-push
-      namespace: pgo
-  # SecretStore that will push to ente
-  - apiVersion: external-secrets.io/v1
-    kind: SecretStore
-    metadata:
-      name: pgo-ente-db-credentials
-      namespace: pgo
-    spec:
-      provider:
-        kubernetes:
-          remoteNamespace: ente
-          server:
-            caProvider:
-              type: ConfigMap
-              name: kube-root-ca.crt
-              key: ca.crt
-          auth:
-            serviceAccount:
-              name: eso-store-push
-  - apiVersion: external-secrets.io/v1alpha1
-    kind: PushSecret
-    metadata:
-      name: postgres-ente-env
-      namespace: pgo
-    spec:
-      refreshInterval: 1h
-      secretStoreRefs:
-        - name: pgo-ente-db-credentials
-          kind: SecretStore
-      selector:
-        secret:
-          name: postgres-pguser-ente
-      data:
-      - match:
-          secretKey: host
-          remoteRef:
-            remoteKey: postgres-ente-env
-            property: ENTE_DB_HOST
-      - match:
-          secretKey: port
-          remoteRef:
-            remoteKey: postgres-ente-env
-            property: ENTE_DB_PORT
-      - match:
-          secretKey: dbname
-          remoteRef:
-            remoteKey: postgres-ente-env
-            property: ENTE_DB_NAME
-      - match:
-          secretKey: user
-          remoteRef:
-            remoteKey: postgres-ente-env
-            property: ENTE_DB_USER
-      - match:
-          secretKey: password
-          remoteRef:
-            remoteKey: postgres-ente-env
-            property: ENTE_DB_PASSWORD
-  - # Secret to mount as credentials.yaml
-    # see museum-credentials.yaml
-    apiVersion: external-secrets.io/v1
-    kind: ExternalSecret
-    metadata:
-      name: museum-credentials
-      namespace: ente
-    spec:
-      refreshInterval: 1h
-      secretStoreRef:
-        kind: ClusterSecretStore
-        name: vault-backend-mycluster
-      dataFrom:
-        - extract:
-            key: /mycluster/ente/museum-credentials
-  - apiVersion: cert-manager.io/v1
-    kind: Certificate
-    metadata:
-      name: ente-wildcard
-      namespace: ente
-    spec:
-      commonName: "*.ente.myexample.com" # Make sure it's based on the baseDomain
-      dnsNames:
-      - "ente.myexample.com"
-      - "*.ente.myexample.com"
-      issuerRef:
-        name: letsencrypt
-        kind: ClusterIssuer
-      secretName: ente-wildcard
+- apiVersion: k8s.mariadb.com/v1alpha1
+  kind: Database
+  metadata:
+    name: casa-mariadb-cluster-leantime
+  spec:
+    characterSet: utf8mb4
+    cleanupPolicy: Delete
+    collate: utf8mb4_general_ci
+    mariaDbRef:
+      name: casa-mariadb-cluster
+      namespace: mariadb
+      waitForIt: true
+    name: leantime
+    requeueInterval: 10h
+    retryInterval: 30s
+
+- apiVersion: k8s.mariadb.com/v1alpha1
+  kind: User
+  metadata:
+    name: casa-mariadb-cluster-leantime
+  spec:
+    cleanupPolicy: Delete
+    host: '%'
+    mariaDbRef:
+      name: casa-mariadb-cluster
+      namespace: mariadb
+      waitForIt: true
+    maxUserConnections: 10
+    name: leantime
+    passwordSecretKeyRef:
+      # We use the same secret
+      key: LEAN_DB_PASSWORD
+      name: leantime-env-from-vault
+    require:
+      ssl: true
+    requeueInterval: 10h
+    retryInterval: 30s
+
+- apiVersion: k8s.mariadb.com/v1alpha1
+  kind: Grant
+  metadata:
+    name: casa-mariadb-cluster-leantime
+  spec:
+    cleanupPolicy: Delete
+    database: leantime
+    grantOption: true
+    host: '%'
+    mariaDbRef:
+      name: casa-mariadb-cluster
+      namespace: mariadb
+      waitForIt: true
+    privileges:
+    - ALL PRIVILEGES
+    requeueInterval: 10h
+    retryInterval: 30s
+    table: '*'
+    username: leantime
+
+- apiVersion: external-secrets.io/v1
+  kind: ExternalSecret
+  metadata:
+    name: leantime-env-from-vault
+  spec:
+    refreshInterval: 5m
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: vault-backend-casa
+    dataFrom:
+      - extract:
+          key: casa/leantime/env

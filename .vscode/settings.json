@@ -8,12 +8,14 @@
         "plaintext"
     ],
     "cSpell.words": [
+        "bitnami",
         "leantime",
         "Leantime",
+        "mariadb",
         "nginx",
         "postgresql",
-        "mariadb",
-        "bitnami",
-        "subchart"
+        "subchart",
+        "userfiles",
+        "Valkey"
     ]
 }

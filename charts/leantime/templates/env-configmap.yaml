@@ -1,3 +1,5 @@
+{{- if and .Values.envFromConfigMap.enabled (not .Values.envFromConfigMap.existingConfigMap) -}}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,3 +10,4 @@ data:
 {{- range $key, $value := .Values.envFromConfigMap.data }}
   {{ $key }}: {{ (tpl (printf "%s" $value) $) | quote }}
 {{- end }}
+{{- end -}}
