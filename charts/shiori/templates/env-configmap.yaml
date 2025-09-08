@@ -1,0 +1,13 @@
+{{- if and .Values.envFromConfigMap.enabled (not .Values.envFromConfigMap.existingConfigMap) -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s" (tpl .Values.envFromConfigMap.cmName $) }}
+  labels:
+    {{- include "shiori.labels" . | nindent 4 }}
+data:
+{{- range $key, $value := .Values.envFromConfigMap.data }}
+  {{ $key }}: {{ (tpl (printf "%s" $value) $) | quote }}
+{{- end }}
+{{- end -}}

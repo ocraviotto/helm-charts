@@ -1,0 +1,303 @@
+# -- This will set the replicaset count more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/>
+# NOTE: Shiori keeps downloads in the SHIORI_DIR value, and at this time this having more than a single replica does not make sense.
+replicaCount: 1
+
+# -- This sets the container image more information can be found here: <https://kubernetes.io/docs/concepts/containers/images/>
+image:
+  # -- We use the upstream shiori image by default. The Dockerfile for the master branch can be found here: <https://github.com/go-shiori/shiori/blob/master/Dockerfile>
+  repository: go-shiori/shiori
+  # -- Set to allow to easily change registry and in our case, mainly to support renovate regular expressions (not required for the Docker hub).
+  registry: ghcr.io
+  # -- This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# -- This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/>
+imagePullSecrets: []
+# -- This is to override the chart name.
+nameOverride: ""
+# -- This is to override the Helm Release name + the chart name.
+fullnameOverride: ""
+
+# -- Container [EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envvar-v1-core) object
+# Use it to override single values. Takes precedence over envFrom* values.
+env: {}
+  # - name: SHIORI_HTTP_SECRET_KEY
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: httpSecretKey
+
+
+# -- This is the default configuration passed to Shiori via environment variables.
+# In principle any sensitive value should be provided via `envFronSecret.data`, or via an externally
+# managed secret mapped to the environment via `env[].valueFrom.secretKeyRef`
+# NOTE: Any variable overlap from the envFromSecret.data section takes precedence over those defined here.
+# @default -- Enabled and populated with all of the values in data
+envFromConfigMap:
+  # -- Defines if we include this in shiori
+  enabled: true
+  # -- The name of an existing ConfigMap to use with `configMapRef.name`.
+  # If this is not empty, we will NOT create the resource with the values defined in data.
+  existingConfigMap: ""
+  # -- Sets the configMap name
+  cmName: '{{ include "shiori.fullname" . }}-env'
+  # -- Additional labels to add to the generated ConfigMap
+  cmLabels: {}
+  # -- Additional annotations to add to the generated ConfigMap
+  cmAnnotations: {}
+  # -- The default contents for configMap. Based on
+  # [Shiori's Configuration Options](https://github.com/go-shiori/shiori/blob/master/docs/Configuration.md),
+  # with the exception of any sensitive variable, that is set in `envFromSecret.data`.
+  # Values support helm templating.
+  # NOTE: Make sure these are all strings!
+  data:
+    # -- The directory where we'll mount the volume for Shiori persistence.
+    SHIORI_DIR: '{{ include "shiori.dir" . }}'
+    # -- Enable HTTP service
+    SHIORI_HTTP_ENABLED: "true"
+    # -- Port number for the HTTP service
+    SHIORI_HTTP_PORT: "8080"
+    # -- Address for the HTTP service
+    SHIORI_HTTP_ADDRESS: ":"
+    # -- Root path for the HTTP service
+    SHIORI_HTTP_ROOT_PATH: "/"
+    # -- Logging accessibility for HTTP requests
+    SHIORI_HTTP_ACCESS_LOG: "true"
+    # -- Serving Web UI via HTTP. Disable serves only the API.
+    SHIORI_HTTP_SERVE_WEB_UI: "true"
+    # -- Limit for request body size
+    SHIORI_HTTP_BODY_LIMIT: "1024"
+    # -- Maximum duration for reading the entire request
+    SHIORI_HTTP_READ_TIMEOUT: "10s"
+    # -- Maximum duration before timing out writes
+    SHIORI_HTTP_WRITE_TIMEOUT: "10s"
+    # -- Maximum amount of time to wait for the next request
+    SHIORI_HTTP_IDLE_TIMEOUT: "10s"
+    # -- Disable HTTP keep-alive connections
+    SHIORI_HTTP_DISABLE_KEEP_ALIVE: "true"
+    # -- Disable pre-parsing of multipart form
+    SHIORI_HTTP_DISABLE_PARSE_MULTIPART_FORM: "true"
+    # -- Enable SSO Auth Proxy Header
+    SHIORI_SSO_PROXY_AUTH_ENABLED: "false"
+    # -- List of CIDRs of trusted proxies
+    SHIORI_SSO_PROXY_AUTH_HEADER_NAME: "Remote-User"
+    # -- List of CIDRs of trusted proxies
+    SHIORI_SSO_PROXY_AUTH_TRUSTED: "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, fc00::/7"
+
+# -- This is the default configuration passed to Shiori via environment variables.
+# Variables here take precedence over envFromConfigMap.
+# NOTE: If enabled and no existingSecret passed, we will attempt to read the
+# values from the target Kubernetes unless regenerate is "true"
+# @default -- Enabled and populated with all of the values in data
+envFromSecret:
+  # -- Defines if we include a secret as envFrom in the shiori container.
+  enabled: true
+  # -- The name of an existing Secret to use with `secretRef.name`.
+  # If this is not empty, we will NOT create the resource with the values defined in data.
+  # So if you have your own secret, set it here and make sure it has all required variables set.
+  # NOTE: Required variables are basically every one listed in the data section.
+  existingSecret: ""
+  # -- If existingSecret is empty, we'll create a secret whose name is defined with this entry.
+  # Supports templating.
+  secretName: '{{ include "shiori.fullname" . }}-env'
+  # -- Force regeneration of dynamically set values in the secret
+  regenerate: false
+  # -- Additional labels to add to the generated secret
+  secretLabels: {}
+  # -- Additional annotations to add to the generated secret
+  secretAnnotations: {}
+  # -- The default contents for Secret. Based on
+  # [Shiori's sample.env](https://github.com/Shiori/docker-shiori/blob/master/sample.env)
+  # and used for sensitive details. Values here are all empty string and should be used only if
+  # overriding auto-generation.
+  data:
+    # -- Secret key for HTTP sessions.
+    SHIORI_HTTP_SECRET_KEY: '{{ randAlphaNum 32 }}'
+    # -- Shiori uses an SQLite3 database stored in the SHIORI_DIR data directory by default.
+    # If you prefer, you can also use MySQL or PostgreSQL database by setting the SHIORI_DATABASE_URL environment variable.
+    # If empty, this will not be set.
+    # If using GitOps or otherwise sharing this values file, please consider setting this value via the `.valueFrom.secretKeyRef`.
+    SHIORI_DATABASE_URL: ""
+
+# Additional Shiori container's [envFrom](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envfromsource-v1-core)
+extraEnvFrom: {}
+
+# -- This section builds out the service account more information can be found here: <https://kubernetes.io/docs/concepts/security/service-accounts/>
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# -- This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/>
+podAnnotations: {}
+# -- This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/>
+podLabels: {}
+
+# -- Pod level
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: "RuntimeDefault"
+
+# -- Shiori container level
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+
+# This is for setting up a service more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/service/>
+service:
+  # This sets the service type more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types>
+  type: ClusterIP
+  # This sets the ports more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports>
+  port: 80
+
+# This block is for setting up the ingress for more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/ingress/>
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+
+# -- For now unless we enable persistence all Shiori downloads will be lost...
+# NOTE: Make sure your cluster has at least a loca path provisioner and a default storageClass.
+persistence:
+  # -- Enable persistent storage for user files. The Claim is enabled by default, but if testing this chart,
+  # it is OK to disable it, in which case we'll use an emptyDir.
+  enabled: true
+  # -- If not empty, it will use this existing Persistent Volume Claim
+  existingClaim: ""
+  # -- If existingClaim is empty and persistence is enabled, when `claim.enabled`is `true`
+  # we'll create a pvc based on these details
+  claim:
+    # --If false, we'll use an emptyDir, which is an ephemeral volume and a very bad idea for production,
+    # but might be useful for testing
+    enabled: true
+    # -- Requested size
+    size: 5Gi
+    # -- See [accessMode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)
+    accessMode: ReadWriteOnce
+    ## Persistent Volume storage class
+    storageClass: ""
+    ## Annotations to add to the Persistent Volume Claim
+    annotations: {}
+  # -- Pod volumes to mount into the container's filesystem. Cannot be updated.
+  # They will only be rendered if persistence.enabled is true.
+  volumeMounts:
+    # -- For now a single volumeMount Shiori is supported
+    shiori:
+      # -- Whether to mount the volume
+      enabled: true
+      # -- Path within the container at which the volume with the plugins should be mounted. Must not contain ':'
+      mountPath: /shiori
+      # -- Path within the volume from which the shiori dir should be mounted.
+      subPath: shiori
+
+# -- We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user.
+resources: {}
+  # If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here:
+# <https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/>
+probes:
+  liveness:
+    httpGet:
+      path: /system/liveness
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    httpGet:
+      path: /system/liveness
+      port: http
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 3
+  startup: {}
+
+# -- This section is for setting up autoscaling
+#  (more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>),
+# but until Shiori decouples downloads from the local storage, or unless using an NFS or similar `ReadWriteMany`
+# storage, this should NOTE be enabled.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# -- Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# -- Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+# -- Pod [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector)
+nodeSelector: {}
+
+# -- Pod [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
+tolerations: []
+
+# -- Pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
+affinity: {}
+
+# -- A list of extra Kubernetes resources to be deployed with the chart.
+# This can be used to deploy resources like ExternalSecrets or other custom resources.
+extraResources: []
+#  - apiVersion: v1
+#    kind: Service
+#    metadata:
+#      name: my-extra-service
+#    spec:
+#      ports:
+#      - port: 80
+#        targetPort: 8080
+#      selector:
+#        app: my-app
