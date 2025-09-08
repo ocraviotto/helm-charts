@@ -13,6 +13,7 @@
                 "/dragonfly/i",
                 "/Valkey/i",
                 "/userfiles/i",
+                "/shiori/i",
                 "/===IGNORE===[\\s\\S]*?===\/IGNORE===/m"
             ]
         },

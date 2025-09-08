@@ -11,9 +11,11 @@
         "bitnami",
         "leantime",
         "Leantime",
+        "linkding",
         "mariadb",
         "nginx",
         "postgresql",
+        "shiori",
         "subchart",
         "userfiles",
         "Valkey"

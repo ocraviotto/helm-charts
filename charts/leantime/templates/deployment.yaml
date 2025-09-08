@@ -57,7 +57,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
@@ -107,9 +107,9 @@ spec:
       volumes:
         {{- if .Values.persistence.enabled }}
         - name: {{ include "leantime.fullname" . }}
-          {{- if eq .Values.persistence.type "pvc" }}
+          {{- if .Values.persistence.claim.enabled }}
           persistentVolumeClaim:
-            claimName: {{ ternary (.Values.persistence.existingClaim | quote) (printf "%s" (include "leantime.fullname" .)) .Values.persistence.existingClaim }}
+            claimName: {{ ternary (printf "%s" (include "leantime.fullname" .)) (.Values.persistence.existingClaim | quote) (empty .Values.persistence.existingClaim)  }}
           {{- else }}
           emptyDir: {}
           {{- end }}

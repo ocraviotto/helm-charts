@@ -30,7 +30,9 @@ metadata:
   name: {{ include "ente.fullname" . }}-museum
   namespace: {{ .Release.Namespace }}
 spec:
+  {{- if not .Values.autoscaling.museum.enabled }}
   replicas: {{ .Values.museum.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "ente.selectorLabels" . | nindent 6 }}

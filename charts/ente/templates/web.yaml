@@ -22,13 +22,15 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "ente.fullname" . }}-web
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "ente.labels" . | nindent 4 }}
     app.kubernetes.io/component: web
+  name: {{ include "ente.fullname" . }}-web
+  namespace: {{ .Release.Namespace }}
 spec:
+  {{- if not .Values.autoscaling.web.enabled }}
   replicas: {{ .Values.web.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "ente.selectorLabels" . | nindent 6 }}
