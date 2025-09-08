@@ -9,7 +9,7 @@ This is a Helm chart for [shiori](https://github.com/go-shiori/shiori), a simple
 This chart bootstraps an shiori deployment on a Kubernetes cluster using the Helm package manager.
 The chart itself has no dependencies, as shiori can run with SQLite (which requires persistence), but it supports configuring a separate PostgreSQL or MariaDB database for better scalability.
 Though the chart takes care of multiple aspects of Shiori's configuration, make sure to read the [documentation](https://github.com/go-shiori/shiori/blob/master/docs/index.md),
- in particular in relation to the [configuration](https://github.com/go-shiori/shiori/blob/master/docs/Configuration.md).
+in particular in relation to the [configuration](https://github.com/go-shiori/shiori/blob/master/docs/Configuration.md).
 
 ## Prerequisites
 
