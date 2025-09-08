@@ -142,6 +142,7 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | image.pullPolicy | string | `"IfNotPresent"` | This sets the pull policy for images. |
 | image.registry | string | `"docker.io"` | Set to allow to easily change registry and in our case, mainly to support renovate regular expressions (not required for the Docker hub). |
 | image.repository | string | `"leantime/leantime"` | We use the upstream leantime by default. Images are built from this repository: <https://github.com/Leantime/docker-leantime> NOTE: This might change as work started to move the configuration to the main repository. |
+| image.tag | string |  value of chart appVersion | Used to override the image tag. |
 | imagePullSecrets | list | `[]` | This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/> |
 | ingress.annotations | object | `{}` |  |
 | ingress.className | string | `""` |  |

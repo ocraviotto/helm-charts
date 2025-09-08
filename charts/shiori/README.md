@@ -1,6 +1,6 @@
 # Shiori Helm Chart
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.42.0](https://img.shields.io/badge/AppVersion-1.42.0-informational?style=flat-square)
+![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v1.7.4](https://img.shields.io/badge/AppVersion-v1.7.4-informational?style=flat-square)
 
 This is a Helm chart for [shiori](https://github.com/go-shiori/shiori), a simple bookmark manager built with Go.
 
@@ -90,6 +90,7 @@ Make sure to check it out if intending on a more serious use of Shiori.
 | image.pullPolicy | string | `"IfNotPresent"` | This sets the pull policy for images. |
 | image.registry | string | `"ghcr.io"` | Set to allow to easily change registry and in our case, mainly to support renovate regular expressions (not required for the Docker hub). |
 | image.repository | string | `"go-shiori/shiori"` | We use the upstream shiori image by default. The Dockerfile for the master branch can be found here: <https://github.com/go-shiori/shiori/blob/master/Dockerfile> |
+| image.tag | string |  value of chart appVersion | Use it to override the image tag. Note: Shiori builds 2 images, one from scratch, and one from alpine, that can be used for troubleshooting. The alpine-based version has the "alpine-" prefix, e.g. "alpine-v1.7.4" |
 | imagePullSecrets | list | `[]` | This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/> |
 | ingress.annotations | object | `{}` |  |
 | ingress.className | string | `""` |  |

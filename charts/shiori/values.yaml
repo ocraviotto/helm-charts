@@ -10,7 +10,10 @@ image:
   registry: ghcr.io
   # -- This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # -- Use it to override the image tag.
+  # Note: Shiori builds 2 images, one from scratch, and one from alpine, that can be used for troubleshooting.
+  # The alpine-based version has the "alpine-" prefix, e.g. "alpine-v1.7.4"
+  # @default --  value of chart appVersion
   tag: ""
 
 # -- This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/>
