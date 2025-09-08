@@ -1,6 +1,6 @@
 # Shiori Helm Chart
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v1.7.4](https://img.shields.io/badge/AppVersion-v1.7.4-informational?style=flat-square)
+![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v1.7.4](https://img.shields.io/badge/AppVersion-v1.7.4-informational?style=flat-square)
 
 This is a Helm chart for [shiori](https://github.com/go-shiori/shiori), a simple bookmark manager built with Go.
 
@@ -27,7 +27,7 @@ If enabling persistence with claim enabled:
 To install the chart with the release name `shiori`:
 
 ```bash
-helm install shiori oci://ghcr.io/ocraviotto/charts/shiori --version 0.1.0
+helm install shiori oci://ghcr.io/ocraviotto/charts/shiori --version 0.1.1
 ```
 
 ## Uninstalling the Chart
@@ -48,7 +48,7 @@ Make sure to check it out if intending on a more serious use of Shiori.
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | affinity | object | `{}` | Pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity) |
-| autoscaling | object | `{"enabled":false,"maxReplicas":100,"minReplicas":1,"targetCPUUtilizationPercentage":80}` | This section is for setting up autoscaling  (more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>), but until Shiori decouples downloads from the local storage, or unless using an NFS or similar `ReadWriteMany` storage, this should NOTE be enabled. |
+| autoscaling | object | `{"enabled":false,"maxReplicas":100,"minReplicas":1,"targetCPUUtilizationPercentage":80}` | This section is for setting up autoscaling  (more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>), but until Shiori decouples downloads from the local storage, or unless using an NFS or similar `ReadWriteMany` storage, this should NOT be enabled. |
 | env | object | `{}` | Container [EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envvar-v1-core) object Use it to override single values. Takes precedence over envFrom* values. |
 | envFromConfigMap | object | Enabled and populated with all of the values in data | This is the default configuration passed to Shiori via environment variables. In principle any sensitive value should be provided via `envFronSecret.data`, or via an externally managed secret mapped to the environment via `env[].valueFrom.secretKeyRef` NOTE: Any variable overlap from the envFromSecret.data section takes precedence over those defined here. |
 | envFromConfigMap.cmAnnotations | object | `{}` | Additional annotations to add to the generated ConfigMap |
@@ -129,7 +129,7 @@ Make sure to check it out if intending on a more serious use of Shiori.
 | probes.readiness.periodSeconds | int | `5` |  |
 | probes.readiness.timeoutSeconds | int | `1` |  |
 | probes.startup | object | `{}` |  |
-| replicaCount | int | `1` | This will set the replicaset count more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/> NOTE: Shiori keeps downloads in the SHIORI_DIR value, and at this time this having more than a single replica does not make sense. |
+| replicaCount | int | `1` | This will set the replicaset count, more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/> NOTE: Shiori keeps downloads in the SHIORI_DIR value, and at this time having more than a single replica does not make sense. NOTE2: We set the strategy to `type: Recreate` |
 | resources | object | `{}` | We usually recommend not to specify default resources and to leave this as a conscious choice for the user. |
 | securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Shiori container level [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). |
 | service.port | int | `80` |  |
@@ -140,5 +140,6 @@ Make sure to check it out if intending on a more serious use of Shiori.
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
 | tolerations | list | `[]` | Pod [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) |
+| updateStrategy | object | `{"type":"Recreate"}` | [Update Strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy) for Shiori. Since we have a persistentVolume with ReadWriteOnce (RWO) we need to make sure that we don't end up in deadlock. |
 | volumeMounts | list | `[]` | Additional volumeMounts on the output Deployment definition. |
 | volumes | list | `[]` | Additional volumes on the output Deployment definition. |

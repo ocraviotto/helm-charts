@@ -1,33 +1,9 @@
-envFromConfigMap:
-  data:
-    # mysql --host="$LEAN_DB_HOST" --user="$LEAN_DB_USER" --database="$LEAN_DB_DATABASE" --password="$LEAN_DB_PASSWORD" --port="$LEAN_DB_PORT" --ssl-ca="$LEAN_DB_MYSQL_ATTR_SSL_CA"
-    LEAN_DB_HOST: "maxscale-casa.mariadb.svc.cluster.local"
-    # Path to the CA certificate where we mount it
-    LEAN_DB_MYSQL_ATTR_SSL_CA: "/var/www/html/storage/mariadb-bundle/ca.crt"
-    # Make sure to require server TLS verification
-    LEAN_DB_MYSQL_ATTR_SSL_VERIFY_SERVER: "true"
-    LEAN_DEFAULT_TIMEZONE: "Europe/Helsinki"
-
-    LEAN_USE_S3: "true"
-    LEAN_S3_BUCKET: "leantime"
-    LEAN_S3_USE_PATH_STYLE_ENDPOINT: "true"
-    LEAN_S3_REGION: "us-east-1"
-    LEAN_S3_END_POINT: "https://minio.example.com"
-
-    LEAN_EMAIL_RETURN: "no-reply@example.com"
-    LEAN_EMAIL_USE_SMTP: "true"
-    LEAN_EMAIL_SMTP_HOSTS: "smtp.gmail.com"
-
-    LEAN_USE_REDIS: "true"
-    LEAN_REDIS_HOST: "leantime.dragonfly.svc.cluster.local"
-    LEAN_REDIS_PORT: "6379"
-    LEAN_REDIS_SCHEME: "tcp"
-    LEAN_REDIS_USERNAME: "leantime"
-
-envFromSecret:
-  # Enabled by default, this will require a secret "leantime-from-vault" with all variables
-  # not in the ConfigMap and normally included in this data object
-  existingSecret: leantime-env-from-vault
+env:
+  - name: SHIORI_DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: shiori-vault
+        key: SHIORI_DATABASE_URL
 
 # For the mariadb bundle
 volumes:
@@ -39,7 +15,7 @@ volumes:
 volumeMounts:
   - name: mariadb-bundle
     # mariadb-bundle has a key ca.crt with the certificate bundle
-    mountPath: "/var/www/html/storage/mariadb-bundle"
+    mountPath: "/etc/ssl/mariadb-bundle"
     readOnly: true
 
 ingress:
@@ -49,7 +25,7 @@ ingress:
     ingress.kubernetes.io/force-ssl-redirect: "true"
     projectcontour.io/tls-cert-namespace: projectcontour
   hosts:
-    - host: &hostName leantime.example.com
+    - host: &hostName shiori.example.com
       paths:
         - path: /
           pathType: ImplementationSpecific
@@ -58,24 +34,27 @@ ingress:
         - *hostName
       secretName: casa-wildcard
 
+persistence:
+  enabled: true
+  claim:
+    #size: 5Gi
+    storageClass: "mix-nvme-devices-replicas"
+
 resources:
   limits:
-    cpu: 1
-    memory: 2Gi
+    memory: 1Gi
   requests:
     cpu: 500m
-    memory: 512Mi
+    memory: 256Mi
 
-# Make sure the included mariadb chart is not enabled if using external!
-mariadb:
-  enabled: false
+nodeSelector: {}
 
 # MariaDB Operator Resources + ExternalSecret
 extraResources:
 - apiVersion: k8s.mariadb.com/v1alpha1
   kind: Database
   metadata:
-    name: casa-mariadb-cluster-leantime
+    name: casa-mariadb-cluster-shiori
   spec:
     characterSet: utf8mb4
     cleanupPolicy: Delete
@@ -84,14 +63,14 @@ extraResources:
       name: casa-mariadb-cluster
       namespace: mariadb
       waitForIt: true
-    name: leantime
+    name: shiori
     requeueInterval: 10h
     retryInterval: 30s
 
 - apiVersion: k8s.mariadb.com/v1alpha1
   kind: User
   metadata:
-    name: casa-mariadb-cluster-leantime
+    name: casa-mariadb-cluster-shiori
   spec:
     cleanupPolicy: Delete
     host: '%'
@@ -100,11 +79,11 @@ extraResources:
       namespace: mariadb
       waitForIt: true
     maxUserConnections: 10
-    name: leantime
+    name: shiori
     passwordSecretKeyRef:
-      # We use the same secret
-      key: LEAN_DB_PASSWORD
-      name: leantime-env-from-vault
+      # We use the same shiori-vault secret
+      key: SHIORI_MYSQL_PASS
+      name: shiori-vault
     require:
       ssl: true
     requeueInterval: 10h
@@ -113,10 +92,10 @@ extraResources:
 - apiVersion: k8s.mariadb.com/v1alpha1
   kind: Grant
   metadata:
-    name: casa-mariadb-cluster-leantime
+    name: casa-mariadb-cluster-shiori
   spec:
     cleanupPolicy: Delete
-    database: leantime
+    database: shiori
     grantOption: true
     host: '%'
     mariaDbRef:
@@ -128,12 +107,12 @@ extraResources:
     requeueInterval: 10h
     retryInterval: 30s
     table: '*'
-    username: leantime
+    username: shiori
 
 - apiVersion: external-secrets.io/v1
   kind: ExternalSecret
   metadata:
-    name: leantime-env-from-vault
+    name: shiori-vault
   spec:
     refreshInterval: 5m
     secretStoreRef:
@@ -141,4 +120,4 @@ extraResources:
       name: vault-backend-casa
     dataFrom:
       - extract:
-          key: casa/leantime/env
+          key: casa/shiori/vault

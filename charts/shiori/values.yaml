@@ -1,5 +1,6 @@
-# -- This will set the replicaset count more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/>
-# NOTE: Shiori keeps downloads in the SHIORI_DIR value, and at this time this having more than a single replica does not make sense.
+# -- This will set the replicaset count, more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/>
+# NOTE: Shiori keeps downloads in the SHIORI_DIR value, and at this time having more than a single replica does not make sense.
+# NOTE2: We set the strategy to `type: Recreate`
 replicaCount: 1
 
 # -- This sets the container image more information can be found here: <https://kubernetes.io/docs/concepts/containers/images/>
@@ -16,6 +17,12 @@ image:
   # @default --  value of chart appVersion
   tag: ""
 
+# -- [Update Strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy) for Shiori.
+# Since we have a persistentVolume with ReadWriteOnce (RWO) we need to make sure that we don't
+# end up in deadlock.
+updateStrategy:
+  type: Recreate
+
 # -- This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/>
 imagePullSecrets: []
 # -- This is to override the chart name.
@@ -27,6 +34,11 @@ fullnameOverride: ""
 # Use it to override single values. Takes precedence over envFrom* values.
 env: {}
   # - name: SHIORI_HTTP_SECRET_KEY
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: httpSecretKey
+  # - name: SHIORI_DATABASE_URL
   #   valueFrom:
   #     secretKeyRef:
   #       name: my-secret
@@ -261,7 +273,7 @@ probes:
 # -- This section is for setting up autoscaling
 #  (more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>),
 # but until Shiori decouples downloads from the local storage, or unless using an NFS or similar `ReadWriteMany`
-# storage, this should NOTE be enabled.
+# storage, this should NOT be enabled.
 autoscaling:
   enabled: false
   minReplicas: 1
