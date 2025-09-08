@@ -6,5 +6,5 @@ metadata:
   namespace: shiori
 type: Opaque
 data:
-  SHIORI_DATABASE_URL: "mysql://shiori:my-password@maxscale-casa.mariadb.svc.cluster.local:3306/shiori?charset=utf8mb4&ssl-ca=/etc/ssl/mariadb-bundle/ca.crt&ssl-verify-server-cert=true"
+  SHIORI_DATABASE_URL: "mysql://shiori:my-password@tcp(maxscale-casa.mariadb.svc.cluster.local:3306)/shiori?charset=utf8mb4&tls=true"
   SHIORI_MYSQL_PASS: my-password

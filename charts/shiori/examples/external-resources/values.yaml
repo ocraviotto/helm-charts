@@ -5,17 +5,21 @@ env:
         name: shiori-vault
         key: SHIORI_DATABASE_URL
 
-# For the mariadb bundle
+# For the mariadb and CA default bundle
 volumes:
   - name: mariadb-bundle
     configMap:
       name: mariadb-bundle
+      items:
+        - key: ca.crt
+          path: ca-certificates.crt
       optional: false
 
 volumeMounts:
   - name: mariadb-bundle
-    # mariadb-bundle has a key ca.crt with the certificate bundle
-    mountPath: "/etc/ssl/mariadb-bundle"
+    # mariadb-bundle maps the ca.crt key with the certificate bundle
+    # to ca-certificates.crt and replaces the default ca-certificates.crt in the image
+    mountPath: "/etc/ssl/certs"
     readOnly: true
 
 ingress:
