@@ -1,0 +1,57 @@
+# Shiori Helm Chart
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+This is a Helm chart for [shiori](https://github.com/go-shiori/shiori), a simple bookmark manager built with Go.
+
+## Introduction
+
+This chart bootstraps an shiori deployment on a Kubernetes cluster using the Helm package manager.
+The chart itself has no dependencies, as shiori can run with SQLite (which requires persistence), but it supports configuring a separate PostgreSQL or MariaDB database for better scalability.
+Though the chart takes care of multiple aspects of Shiori's configuration, make sure to read the [documentation](https://github.com/go-shiori/shiori/blob/master/docs/index.md),
+in particular in relation to the [configuration](https://github.com/go-shiori/shiori/blob/master/docs/Configuration.md).
+
+## Prerequisites
+
+* Kubernetes 1.23+
+* Helm 3.8.0+
+
+### Additionally
+
+If enabling persistence with claim enabled:
+
+* PV provisioner support in the underlying infrastructure
+
+## Installing the Chart
+
+To install the chart with the release name `shiori`:
+
+```bash
+helm install shiori oci://ghcr.io/ocraviotto/charts/shiori --version {{ template "chart.version" . }}
+```
+
+## Uninstalling the Chart
+
+To uninstall/delete the `shiori` release:
+
+```bash
+helm delete shiori
+```
+
+## Example
+
+The [external-resources example](examples/external-resources) contains a modified values file to use with a more production-like environment.
+Make sure to check it out if intending on a more serious use of Shiori.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.valuesSection" . }}

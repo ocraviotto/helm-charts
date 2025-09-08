@@ -13,6 +13,8 @@
                 "/dragonfly/i",
                 "/Valkey/i",
                 "/userfiles/i",
+                "/shiori/i",
+                "local storage",
                 "/===IGNORE===[\\s\\S]*?===\/IGNORE===/m"
             ]
         },
