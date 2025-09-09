@@ -1,9 +1,8 @@
-env:
-  - name: SHIORI_DATABASE_URL
-    valueFrom:
-      secretKeyRef:
-        name: shiori-vault
-        key: SHIORI_DATABASE_URL
+image:
+  tag: alpine-v1.7.4
+
+envFromSecret:
+  existingSecret: shiori-vault
 
 # For the mariadb and CA default bundle
 volumes:

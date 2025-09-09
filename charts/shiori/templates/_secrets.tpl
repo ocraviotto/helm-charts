@@ -7,7 +7,7 @@ This template handles the logic for generating and retrieving the data on upgrad
   {{- $existingSecret := lookup "v1" "Secret" .Release.Namespace $secretName -}}
   {{- $regenerate := .Values.envFromSecret.regenerate -}}
   {{- $existingSecretData := dict -}}
-  {{- $_ := deepCopy ($existingSecret | default dict) | merge $existingSecretData -}}
+  {{- $_ := deepCopy (($existingSecret | default dict).data | default dict) | merge $existingSecretData -}}
   {{- $data := dict -}}
 
   {{/* First let's go over envFromConfigMap.data */}}

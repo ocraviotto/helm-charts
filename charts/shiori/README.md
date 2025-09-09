@@ -131,7 +131,7 @@ Make sure to check it out if intending on a more serious use of Shiori.
 | probes.startup | object | `{}` |  |
 | replicaCount | int | `1` | This will set the replicaset count, more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/> NOTE: Shiori keeps downloads in the SHIORI_DIR value, and at this time having more than a single replica does not make sense. NOTE2: We set the strategy to `type: Recreate` |
 | resources | object | `{}` | We usually recommend not to specify default resources and to leave this as a conscious choice for the user. |
-| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":true}` | Shiori container level [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). |
+| securityContext | object | `{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"readOnlyRootFilesystem":false}` | Shiori container level [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container). |
 | service.port | int | `80` |  |
 | service.type | string | `"ClusterIP"` |  |
 | serviceAccount | object | `{"annotations":{},"automount":true,"create":true,"name":""}` | This section builds out the service account more information can be found here: <https://kubernetes.io/docs/concepts/security/service-accounts/> |
