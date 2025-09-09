@@ -19,7 +19,7 @@ For details:
 
 ### Create Leantime
 
-Example command using helm template instead of helm install (e.g. better compatibility with ArgoCD or simply a good way to ensure namespaces for resources defined in extra-resources if not explicitly defined):
+Example command using helm template instead of helm install (e.g. better compatibility with ArgoCD) since we do not depend on the lookup function given that we pass `existingSecret: leantime-env-from-vault`
 
 ```sh
 helm template leantime oci://ghcr.io/ocraviotto/charts/leantime --namespace leantime --values /path/to/values.yaml --skip-tests | kubectl --namespace leantime diff -f -

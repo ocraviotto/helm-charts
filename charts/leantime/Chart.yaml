@@ -2,7 +2,7 @@ apiVersion: v2
 name: leantime
 description: A Helm chart for Kubernetes to deploy Leantime
 type: application
-version: 0.1.1
+version: 0.1.2
 appVersion: "3.5.12"
 
 dependencies:

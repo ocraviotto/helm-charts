@@ -1,0 +1,126 @@
+image:
+  tag: alpine-v1.7.4
+
+envFromSecret:
+  existingSecret: shiori-vault
+
+# For the mariadb and CA default bundle
+volumes:
+  - name: mariadb-bundle
+    configMap:
+      name: mariadb-bundle
+      items:
+        - key: ca.crt
+          path: ca-certificates.crt
+      optional: false
+
+volumeMounts:
+  - name: mariadb-bundle
+    # mariadb-bundle maps the ca.crt key with the certificate bundle
+    # to ca-certificates.crt and replaces the default ca-certificates.crt in the image
+    mountPath: "/etc/ssl/certs"
+    readOnly: true
+
+ingress:
+  enabled: true
+  className: "contour"
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    projectcontour.io/tls-cert-namespace: projectcontour
+  hosts:
+    - host: &hostName shiori.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - hosts:
+        - *hostName
+      secretName: casa-wildcard
+
+persistence:
+  enabled: true
+  claim:
+    #size: 5Gi
+    storageClass: "mix-nvme-devices-replicas"
+
+resources:
+  limits:
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}
+
+# MariaDB Operator Resources + ExternalSecret
+extraResources:
+- apiVersion: k8s.mariadb.com/v1alpha1
+  kind: Database
+  metadata:
+    name: casa-mariadb-cluster-shiori
+  spec:
+    characterSet: utf8mb4
+    cleanupPolicy: Delete
+    collate: utf8mb4_general_ci
+    mariaDbRef:
+      name: casa-mariadb-cluster
+      namespace: mariadb
+      waitForIt: true
+    name: shiori
+    requeueInterval: 10h
+    retryInterval: 30s
+
+- apiVersion: k8s.mariadb.com/v1alpha1
+  kind: User
+  metadata:
+    name: casa-mariadb-cluster-shiori
+  spec:
+    cleanupPolicy: Delete
+    host: '%'
+    mariaDbRef:
+      name: casa-mariadb-cluster
+      namespace: mariadb
+      waitForIt: true
+    maxUserConnections: 10
+    name: shiori
+    passwordSecretKeyRef:
+      # We use the same shiori-vault secret
+      key: SHIORI_MYSQL_PASS
+      name: shiori-vault
+    require:
+      ssl: true
+    requeueInterval: 10h
+    retryInterval: 30s
+
+- apiVersion: k8s.mariadb.com/v1alpha1
+  kind: Grant
+  metadata:
+    name: casa-mariadb-cluster-shiori
+  spec:
+    cleanupPolicy: Delete
+    database: shiori
+    grantOption: true
+    host: '%'
+    mariaDbRef:
+      name: casa-mariadb-cluster
+      namespace: mariadb
+      waitForIt: true
+    privileges:
+    - ALL PRIVILEGES
+    requeueInterval: 10h
+    retryInterval: 30s
+    table: '*'
+    username: shiori
+
+- apiVersion: external-secrets.io/v1
+  kind: ExternalSecret
+  metadata:
+    name: shiori-vault
+  spec:
+    refreshInterval: 5m
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: vault-backend-casa
+    dataFrom:
+      - extract:
+          key: casa/shiori/vault

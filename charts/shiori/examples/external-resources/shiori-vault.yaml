@@ -1,0 +1,10 @@
+# Secret managed with externalSecrets. Details omitted and base64 encoded values decoded.
+kind: Secret
+apiVersion: v1
+metadata:
+  name: shiori-vault
+  namespace: shiori
+type: Opaque
+data:
+  SHIORI_DATABASE_URL: "mysql://shiori:my-password@tcp(maxscale-casa.mariadb.svc.cluster.local:3306)/shiori?charset=utf8mb4&tls=true"
+  SHIORI_MYSQL_PASS: my-password

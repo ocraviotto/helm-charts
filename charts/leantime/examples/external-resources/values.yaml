@@ -70,7 +70,7 @@ resources:
 mariadb:
   enabled: false
 
-# MariaDB Operator Resources + Dragonfly
+# MariaDB Operator Resources + ExternalSecret
 extraResources:
 - apiVersion: k8s.mariadb.com/v1alpha1
   kind: Database
