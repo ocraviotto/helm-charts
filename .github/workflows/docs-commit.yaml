@@ -5,14 +5,39 @@ on:
     workflows: ["CI"]
     types: [completed]
     branches:
+      - "renovate*"
       - "renovate/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 jobs:
+  check-artifact:
+    runs-on: ubuntu-24.04
+    outputs:
+      has_patch: ${{ steps.check.outputs.has_patch }}
+    steps:
+      - name: Check for "docs-patch" artifact
+        id: check
+        run: |
+          response=$(curl -sSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "${{ github.event.workflow_run.artifacts_url }}")
+
+          # See if any artifact has the name "docs-patch"
+          found=$(echo "$response" | jq '.artifacts | map(select(.name == "docs-patch")) | length')
+
+          if [ "$found" -gt 0 ]; then
+            echo "Artifact 'docs-patch' found"
+            echo "has_patch=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Artifact 'docs-patch' not found"
+            echo "has_patch=false" >> "$GITHUB_OUTPUT"
+          fi
   apply-patch:
-    if: (github.event.workflow_run.conclusion == 'success') && (github.event.workflow_run.head_repository.full_name == 'ocraviotto/helm-charts')
+    needs: check-artifact
+    if: (github.event.workflow_run.conclusion == 'success') && (github.event.workflow_run.head_repository.full_name == 'ocraviotto/helm-charts') && (needs.check-artifact.outputs.has_patch == 'true')
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout PR branch
