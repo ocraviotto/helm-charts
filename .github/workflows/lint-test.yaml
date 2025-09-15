@@ -112,7 +112,7 @@ jobs:
       - name: Check for changes
         id: check
         run: |
-          if git diff; then
+          if git diff --exit-code; then
             echo "no_changes=true" >> "$GITHUB_OUTPUT"
           else
             echo "no_changes=false" >> "$GITHUB_OUTPUT"
@@ -124,17 +124,17 @@ jobs:
           echo -e "\n####### Git changes detected! Run helm-docs locally and commit README updates.\n"
           exit 1
 
-      - name: Fail if not from branches renovate/
-        if: steps.check.outputs.no_changes == 'false' && ! startsWith(github.event.pull_request.head.ref, 'renovate/')
+      - name: Fail if not from branches renovate
+        if: steps.check.outputs.no_changes == 'false' && ! startsWith(github.event.pull_request.head.ref, 'renovate')
         run: |
           echo -e "\n####### Git changes detected! Run helm-docs locally and commit README updates.\n"
           exit 1
 
-      - name: Upload patch for Renovate branches
+      - name: Generate patch for Renovate branches
         if: |
           steps.check.outputs.no_changes == 'false' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          startsWith(github.event.pull_request.head.ref, 'renovate/')
+          startsWith(github.event.pull_request.head.ref, 'renovate')
         run: |
           git diff > changes.patch
         continue-on-error: true
@@ -143,7 +143,7 @@ jobs:
         if: |
           steps.check.outputs.no_changes == 'false' &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          startsWith(github.event.pull_request.head.ref, 'renovate/')
+          startsWith(github.event.pull_request.head.ref, 'renovate')
         with:
           name: docs-patch
           path: changes.patch
