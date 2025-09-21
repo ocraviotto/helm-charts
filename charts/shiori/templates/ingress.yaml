@@ -3,6 +3,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "shiori.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "shiori.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}

@@ -3,6 +3,7 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: {{ include "shiori.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   {{- with .Values.persistence.claim.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
