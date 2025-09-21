@@ -1,0 +1,125 @@
+_shared_config:
+  hostname: &hostName readeck.example.com
+  url: &url https://readeck.example.com
+
+env:
+  - name: READECK_DATABASE_SOURCE
+    valueFrom:
+      secretKeyRef:
+        name: postgres-pguser-readeck
+        key: READECK_DATABASE_SOURCE
+
+envFromSecret:
+  existingSecret: readeck-vault
+
+envFromConfigMap:
+  data:
+    READECK_TRUSTED_PROXIES: "10.244.0.0/16" # podSubnets from where requests from ingress proxies should come
+    READECK_SERVER_BASE_URL: *url
+    READECK_ALLOWED_HOSTS: *hostName
+    READECK_WORKER_NUMBER: "1"
+    READECK_METRICS_HOST: "0.0.0.0" # We'll have /metrics and /debug available within the cluster
+    READECK_MAIL_HOST: "smtp.gmail.com"
+    READECK_MAIL_PORT: "587"
+    READECK_MAIL_ENCRYPTION: "starttls"
+    READECK_MAIL_FROM: "readeck@example.com"
+    READECK_MAIL_FROMNOREPLY: "no-reply@example.com"
+    READECK_PUBLIC_SHARE_TTL: "48"
+
+ingress:
+  enabled: true
+  className: "contour"
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    projectcontour.io/tls-cert-namespace: projectcontour
+  hosts:
+    - host: *hostName
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - hosts:
+        - *hostName
+      secretName: casa-wildcard
+
+persistence:
+  enabled: true
+  claim:
+    #size: 5Gi
+    storageClass: "mix-nvme-devices-replicas"
+
+resources:
+  limits:
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}
+
+# ExternalSecret related resources, including
+extraResources:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      namespace: {{ .Release.Namespace }}
+      name: eso-store-push-binding
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: eso-store-push-role
+    subjects:
+    - kind: ServiceAccount
+      name: eso-store-push
+      namespace: pgo
+  - apiVersion: external-secrets.io/v1
+    kind: SecretStore
+    metadata:
+      name: pgo-readeck-db-credentials
+      namespace: pgo
+    spec:
+      provider:
+        kubernetes:
+          remoteNamespace: {{ .Release.Namespace }}
+          server:
+            caProvider:
+              type: ConfigMap
+              name: kube-root-ca.crt
+              key: ca.crt
+          auth:
+            serviceAccount:
+              name: eso-store-push
+  - apiVersion: external-secrets.io/v1alpha1
+    kind: PushSecret
+    metadata:
+      name: postgres-pguser-readeck
+      namespace: pgo
+    spec:
+      refreshInterval: 1h
+      secretStoreRefs:
+        - name: pgo-readeck-db-credentials
+          kind: SecretStore
+      selector:
+        secret:
+          name: postgres-pguser-readeck
+      template:
+        engineVersion: v2
+        data:
+          READECK_DATABASE_SOURCE: '{{ .uri | replace "postgresql://" "postgres://" }}'
+      data:
+      - match:
+          remoteRef:
+            remoteKey: postgres-pguser-readeck
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: readeck-vault
+      namespace: {{ .Release.Namespace }}
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: vault-backend-casa
+      dataFrom:
+        - extract:
+            key: casa/readeck/env

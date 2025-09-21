@@ -1,0 +1,9 @@
+# Secret managed with externalSecrets via PushSecret. Details omitted and base64 encoded values decoded.
+kind: Secret
+apiVersion: v1
+metadata:
+  name: postgres-pguser-readeck
+  namespace: readeck
+type: Opaque
+data:
+  READECK_DATABASE_SOURCE: "postgresql://readeck:MyPostgrSQLPassword@postgres-primary.pgo.svc:5432/readeck"

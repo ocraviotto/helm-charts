@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "readeck.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "readeck.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "readeck.selectorLabels" . | nindent 6 }}
+  {{- with .Values.updateStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include "readeck.checksum" . | quote }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "readeck.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "readeck.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- with .Values.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.envFromConfigMap.enabled .Values.envFromSecret.enabled .Values.extraEnvFrom }}
+          envFrom:
+            {{- if .Values.envFromConfigMap.enabled }}
+            - configMapRef:
+                name: {{ .Values.envFromConfigMap.existingConfigMap | default (printf "%s" (tpl .Values.envFromConfigMap.cmName $)) }}
+            {{- end }}
+            {{- if .Values.envFromSecret.enabled }}
+            - secretRef:
+                name: {{ .Values.envFromSecret.existingSecret | default (printf "%s" (tpl .Values.envFromSecret.secretName $)) }}
+            {{- end}}
+            {{- with .Values.extraEnvFrom }}
+              {{- toYaml . | nindent 12 }}
+            {{- end}}
+          {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.envFromConfigMap.data.READECK_SERVER_PORT | default 8000 | int64 }}
+              protocol: TCP
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.probes.startup }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.volumeMounts .Values.persistence.enabled }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+              {{- if .Values.persistence.volumeMounts.readeck.enabled }}
+            - name: {{ include "readeck.fullname" . }}
+              mountPath: {{ .Values.persistence.volumeMounts.readeck.mountPath }}
+              subPath: {{ .Values.persistence.volumeMounts.readeck.subPath }}
+              {{- end }}
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+              {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+      {{- if or .Values.volumes .Values.persistence.enabled }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: {{ include "readeck.fullname" . }}
+          {{- if .Values.persistence.claim.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ ternary (printf "%s" (include "readeck.fullname" .)) (.Values.persistence.existingClaim | quote) (empty .Values.persistence.existingClaim) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- with .Values.volumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "readeck.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "readeck.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "readeck.selectorLabels" . | nindent 4 }}
