@@ -9,5 +9,5 @@
 /path/charts/readeck/examples/external-resources/postgres-pguser-readeck.yaml:kubernetes-secret-yaml:2
 /github/workspace/charts/readeck/examples/external-resources/readeck-vault.yaml:generic-api-key:9
 /path/charts/readeck/examples/external-resources/readeck-vault.yaml:generic-api-key:9
-/github/workspace/readeck/examples/external-resources/readeck-vault.yaml:kubernetes-secret-yaml:2
+/github/workspace/charts/readeck/examples/external-resources/readeck-vault.yaml:kubernetes-secret-yaml:2
 /path/charts/readeck/examples/external-resources/readeck-vault.yaml:kubernetes-secret-yaml:2

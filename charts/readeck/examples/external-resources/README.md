@@ -1,18 +1,18 @@
 # Examples
 
-## External MariaDB (with mariadb-operator)
+## External PostgreSQL (with postgres-operator)
 
-Example to setup Readeck with an external PostgrSQL and a proper storageClass for a more production-like deployment in a GitOps context.
+Example to setup Readeck with an external PostgreSQL and a proper storageClass for a more production-like deployment in a GitOps context.
 
 For details:
 
-- check the [values.yaml](values.yaml) for overrides as well as additional resources (like the MariaDB User, Database and Grant).
+- check the [values.yaml](values.yaml) for overrides as well as additional resources (like the PushSecrets and other ExternalSecrets resources).
 
 ## To apply this example
 
 ### Requirements
 
-1. Make sure to have a PostgrSQL cluster installed with the CrunchyData postgres-operator and the db and user readeck crated. NOTE: You can probably make this example work with the CludNativePG too but I have not tested it with it.
+1. Make sure to have a PostgreSQL cluster installed with the CrunchyData postgres-operator and the db and user readeck crated. NOTE: You can probably make this example work with the CloudNativePG too but I have not tested it with it.
 2. Have the ExternalSecrets operator with HashiCorp Vault as its ClusterSecretStore backend (or modify that to suite your configuration).
 
 ### Create Readeck

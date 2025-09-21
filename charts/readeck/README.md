@@ -72,7 +72,7 @@ Make sure to check it out if intending on a more serious use of Readeck.
 | envFromConfigMap.data.READECK_PUBLIC_SHARE_TTL | string | `"24"` | Number of hours a shared bookmark is available. |
 | envFromConfigMap.data.READECK_SERVER_BASE_URL | string | `""` | Instance URL (optional) Important: When this is set to an HTTP or HTTPS URL, it's used as the only valid URL of your instance. Any information sent by a reverse proxy is ignored. If this URL contains a path other than `/`, it replaces the `prefix` value. |
 | envFromConfigMap.data.READECK_SERVER_CERT_FILE | string | `""` | Path to the cert file for Readeck to use HTTPS (and HTTP/2) |
-| envFromConfigMap.data.READECK_SERVER_HOST | string | `"0.0.0.0"` | The IP address or unix socket on which Readeck listens to. |
+| envFromConfigMap.data.READECK_SERVER_HOST | string | `"0.0.0.0"` | The IP address or Unix socket on which Readeck listens to. |
 | envFromConfigMap.data.READECK_SERVER_KEY_FILE | string | `""` | Path to the key file for Readeck to use HTTPS (and HTTP/2) |
 | envFromConfigMap.data.READECK_SERVER_PORT | string | `"8000"` | The TCP port on which Readeck listens to. |
 | envFromConfigMap.data.READECK_SERVER_PREFIX | string | `"/"` | The URL prefix of Readeck. |
