@@ -1,0 +1,344 @@
+# -- This will set the replicaset count, more information can be found here: <https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/>
+# NOTE: Readeck keeps downloads in the READECK_DATA_DIRECTORY value (see below), and at this time having more than a single replica does not make sense.
+# NOTE2: We set the strategy to `type: Recreate`
+replicaCount: 1
+
+# -- This sets the container image more information can be found here: <https://kubernetes.io/docs/concepts/containers/images/>
+image:
+  # -- We use the upstream readeck image by default. The image build script in python is here: <https://codeberg.org/readeck/readeck/src/branch/main/tools/build-container>
+  repository: readeck/readeck
+  # -- Set to allow to easily change registry and in our case, mainly to support renovate regular expressions (not required for the Docker hub).
+  registry: codeberg.org
+  # -- This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # -- Use it to override the image tag.
+  # Note: Readeck builds 2 images, one from scratch, and one from alpine, that can be used for troubleshooting.
+  # The alpine-based version has the "alpine-" prefix, e.g. "alpine-v1.7.4"
+  # @default --  value of chart appVersion
+  tag: ""
+
+# -- [Update Strategy](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy) for Readeck.
+# Since we have a persistentVolume with ReadWriteOnce (RWO) we need to make sure that we don't
+# end up in deadlock.
+updateStrategy:
+  type: Recreate
+
+# -- This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/>
+imagePullSecrets: []
+# -- This is to override the chart name.
+nameOverride: ""
+# -- This is to override the Helm Release name + the chart name.
+fullnameOverride: ""
+
+# -- Container [EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envvar-v1-core) object
+# Use it to override single values. Takes precedence over envFrom* values.
+env: {}
+  # - name: READECK_DATABASE_SOURCE
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: databaseUrl
+  # - name: READECK_MAIL_PASSWORD
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: mailPassword
+
+
+# -- This is the default configuration passed to Readeck via environment variables.
+# In principle any sensitive value should be provided via `envFronSecret.data`, or via an externally
+# managed secret mapped to the environment via `env[].valueFrom.secretKeyRef`
+# NOTE: Any variable overlap from the envFromSecret.data section takes precedence over those defined here.
+# @default -- Enabled and populated with all of the values in data
+envFromConfigMap:
+  # -- Defines if we include this in readeck
+  enabled: true
+  # -- The name of an existing ConfigMap to use with `configMapRef.name`.
+  # If this is not empty, we will NOT create the resource with the values defined in data.
+  existingConfigMap: ""
+  # -- Sets the configMap name
+  cmName: '{{ include "readeck.fullname" . }}-env'
+  # -- Additional labels to add to the generated ConfigMap
+  cmLabels: {}
+  # -- Additional annotations to add to the generated ConfigMap
+  cmAnnotations: {}
+  # -- The default contents for configMap. Based on
+  # [Readeck's Configuration Options](https://readeck.org/en/docs/configuration),
+  # with the exception of any sensitive variable, that is set in `envFromSecret.data`.
+  # Values support helm templating.
+  # NOTE: Make sure these are all strings!
+  data:
+    # -- The directory where we'll mount the volume for Readeck persistence.
+    # This is relative to the container workingdir (/readeck)
+    # @default -- "data"
+    READECK_DATA_DIRECTORY: '{{ include "readeck.dir" . }}'
+    # -- Defines the application log level. Can be one of `error`, `warn`, `info`, `debug`.
+    READECK_LOG_LEVEL: "info"
+    # -- Defines the log format. Can be one of `json`, `text` or `dev`.
+    READECK_LOG_FORMAT: "json"
+    # -- The IP address or Unix socket on which Readeck listens to.
+    READECK_SERVER_HOST: "0.0.0.0"
+    # -- The TCP port on which Readeck listens to.
+    READECK_SERVER_PORT: "8000"
+    # -- The URL prefix of Readeck.
+    READECK_SERVER_PREFIX: "/"
+    # -- A list of hostnames allowed in HTTP requests.
+    READECK_ALLOWED_HOSTS: ""
+    # -- Sets the trusted IP addresses that can set `X-Forwarded` headers.
+    READECK_TRUSTED_PROXIES: "127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fd00::/8,::1/128"
+    # -- Instance URL (optional)
+    # Important: When this is set to an HTTP or HTTPS URL, it's used as the only valid URL of your instance.
+    # Any information sent by a reverse proxy is ignored. If this URL contains a path other than `/`, it replaces the `prefix` value.
+    READECK_SERVER_BASE_URL: ""
+    # -- Path to the cert file for Readeck to use HTTPS (and HTTP/2)
+    READECK_SERVER_CERT_FILE: ""
+    # -- Path to the key file for Readeck to use HTTPS (and HTTP/2)
+    READECK_SERVER_KEY_FILE: ""
+    # -- The SMTP Host to send emails through
+    READECK_MAIL_HOST: ""
+    # -- The TCP Port of the SMTP host
+    READECK_MAIL_PORT: ""
+    # -- The SMTP username if needed
+    READECK_MAIL_USERNAME: ""
+    # -- The SMTP password if needed
+    READECK_MAIL_PASSWORD: ""
+    # -- If `true`, it will NOT verify the server certificate
+    READECK_MAIL_INSECURE: "false"
+    # -- One of `starttls` or `ssltls`. Sets the encryption mechanism of the SMTP host
+    READECK_MAIL_ENCRYPTION: ""
+    # -- Email address of the `From` messages header.
+    READECK_MAIL_FROM: ""
+    # -- Email address of the `From` header for messages that don't need a reply.
+    READECK_MAIL_FROMNOREPLY: ""
+    # -- Number of hours a shared bookmark is available.
+    READECK_PUBLIC_SHARE_TTL: "24"
+    # -- Data Source Name for Readeck's message bus and task executor
+    # Can be either `memory://` or `redis://`
+    # @default -- "memory://"
+    READECK_WORKER_DSN: ""
+    # -- Number of Readeck's message bus and task executor workers
+    # If not given, it's calculated based on runtime.NumCPU(), so if no limits are set,
+    # runtime.NumCPU() will see all of the node's logical CPUs.
+    # IMPORTANT: If not setting limits, make sure to set this value.
+    # @default -- min of 1
+    READECK_WORKER_NUMBER: ""
+    # -- Whether to start Readeck's message bus and task executor worker(s)
+    READECK_WORKER_START: "true"
+    # -- Host to bind to listen for /metrics (prometheus) and /debug (profiler) requests.
+    READECK_METRICS_HOST: "127.0.0.1"
+    # -- Port to bind to listen for /metrics (prometheus) and /debug (profiler) requests.
+    READECK_METRICS_PORT: "8002"
+
+# -- This is the default configuration passed to Readeck via environment variables.
+# Variables here take precedence over envFromConfigMap.
+# NOTE: If enabled and no existingSecret passed, we will attempt to read the
+# values from the target Kubernetes unless regenerate is "true"
+# @default -- Enabled and populated with all of the values in data
+envFromSecret:
+  # -- Defines if we include a secret as envFrom in the readeck container.
+  enabled: true
+  # -- The name of an existing Secret to use with `secretRef.name`.
+  # If this is not empty, we will NOT create the resource with the values defined in data.
+  # So if you have your own secret, set it here and make sure it has all required variables set.
+  # NOTE: Required variables are basically every one listed in the data section.
+  existingSecret: ""
+  # -- If existingSecret is empty, we'll create a secret whose name is defined with this entry.
+  # Supports templating.
+  secretName: '{{ include "readeck.fullname" . }}-env'
+  # -- Force regeneration of dynamically set values in the secret
+  regenerate: false
+  # -- Additional labels to add to the generated secret
+  secretLabels: {}
+  # -- Additional annotations to add to the generated secret
+  secretAnnotations: {}
+  # -- The default contents for the Secret to mount.
+  data:
+    # -- The main secret key. It must be set and be a long string of random characters.
+    READECK_SECRET_KEY: '{{ randAlphaNum 32 }}'
+    # -- Readeck uses an SQLite3 database stored in the READECK_DATA_DIRECTORY data directory by default.
+    # If you prefer, you can also use a PostgreSQL database by setting the READECK_DATABASE_SOURCE environment variable.
+    # If using GitOps or otherwise sharing this values file, please consider setting this value via the `.valueFrom.secretKeyRef`.
+    # All relative file locations are relative to the /readeck workingdir.
+    # @default -- "sqlite3:data/db.sqlite3"
+    READECK_DATABASE_SOURCE: ""
+
+# Additional Readeck container's [envFrom](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#envfromsource-v1-core)
+extraEnvFrom: {}
+
+# -- This section builds out the service account more information can be found here: <https://kubernetes.io/docs/concepts/security/service-accounts/>
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# -- This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/>
+podAnnotations: {}
+# -- This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/>
+podLabels: {}
+
+# -- Pod level
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
+podSecurityContext:
+  fsGroup: 1000
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: "RuntimeDefault"
+
+# -- Readeck container level
+# [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container).
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+
+# This is for setting up a service more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/service/>
+service:
+  # This sets the service type more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types>
+  type: ClusterIP
+  # This sets the ports more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports>
+  port: 80
+
+# This block is for setting up the ingress for more information can be found here: <https://kubernetes.io/docs/concepts/services-networking/ingress/>
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+
+# -- For now unless we enable persistence all Readeck downloads will be lost...
+# NOTE: Make sure your cluster has at least a loca path provisioner and a default storageClass.
+persistence:
+  # -- Enable persistent storage for user files. The Claim is enabled by default, but if testing this chart,
+  # it is OK to disable it, in which case we'll use an emptyDir.
+  enabled: true
+  # -- If not empty, it will use this existing Persistent Volume Claim
+  existingClaim: ""
+  # -- If existingClaim is empty and persistence is enabled, when `claim.enabled`is `true`
+  # we'll create a pvc based on these details
+  claim:
+    # --If false, we'll use an emptyDir, which is an ephemeral volume and a very bad idea for production,
+    # but might be useful for testing
+    enabled: true
+    # -- Requested size
+    size: 5Gi
+    # -- See [accessMode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)
+    accessMode: ReadWriteOnce
+    ## Persistent Volume storage class
+    storageClass: ""
+    ## Annotations to add to the Persistent Volume Claim
+    annotations: {}
+  # -- Pod volumes to mount into the container's filesystem. Cannot be updated.
+  # They will only be rendered if persistence.enabled is true.
+  volumeMounts:
+    # -- For now a single volumeMount Readeck is supported
+    readeck:
+      # -- Whether to mount the volume
+      enabled: true
+      # -- Path within the container at which the volume with the plugins should be mounted. Must not contain ':'
+      mountPath: /readeck
+      # -- Path within the volume from which the readeck dir should be mounted.
+      subPath: readeck
+
+# -- We usually recommend not to specify default resources and to leave this as a conscious
+# choice for the user.
+resources: {}
+  # If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here:
+# <https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/>
+probes:
+  liveness:
+    httpGet:
+      path: /api/info
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    httpGet:
+      path: /api/info
+      port: http
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 1
+    failureThreshold: 3
+  startup: {}
+
+# -- This section is for setting up autoscaling
+#  (more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>),
+# but until Readeck decouples downloads from the local storage, or unless using an NFS or similar `ReadWriteMany`
+# storage, this should NOT be enabled.
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# -- Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+# -- Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+# -- Pod [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector)
+nodeSelector: {}
+
+# -- Pod [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
+tolerations: []
+
+# -- Pod [affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity)
+affinity: {}
+
+# -- A list of extra Kubernetes resources to be deployed with the chart.
+# This can be used to deploy resources like ExternalSecrets or other custom resources.
+extraResources: []
+#  - apiVersion: v1
+#    kind: Service
+#    metadata:
+#      name: my-extra-service
+#    spec:
+#      ports:
+#      - port: 80
+#        targetPort: 8080
+#      selector:
+#        app: my-app

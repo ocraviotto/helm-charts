@@ -1,6 +1,6 @@
 # Shiori Helm Chart
 
-![Version: 0.1.1](https://img.shields.io/badge/Version-0.1.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v1.7.4](https://img.shields.io/badge/AppVersion-v1.7.4-informational?style=flat-square)
+![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v1.7.4](https://img.shields.io/badge/AppVersion-v1.7.4-informational?style=flat-square)
 
 This is a Helm chart for [shiori](https://github.com/go-shiori/shiori), a simple bookmark manager built with Go.
 
@@ -27,7 +27,7 @@ If enabling persistence with claim enabled:
 To install the chart with the release name `shiori`:
 
 ```bash
-helm install shiori oci://ghcr.io/ocraviotto/charts/shiori --version 0.1.1
+helm install shiori oci://ghcr.io/ocraviotto/charts/shiori --version 0.1.2
 ```
 
 ## Uninstalling the Chart

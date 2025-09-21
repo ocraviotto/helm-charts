@@ -1,0 +1,11 @@
+# Secret managed with externalSecrets via PushSecret. Details omitted and base64 encoded values decoded.
+kind: Secret
+apiVersion: v1
+metadata:
+  name: readeck-vault
+  namespace: readeck
+type: Opaque
+data:
+  READECK_SECRET_KEY: "Puhpiuyiuynoit6ekusndygCA"
+  READECK_MAIL_USERNAME: "myusername"
+  READECK_MAIL_PASSWORD: "MyEmailPassword"

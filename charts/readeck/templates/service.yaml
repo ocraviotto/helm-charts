@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "shiori.fullname" . }}
+  name: {{ include "readeck.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "shiori.labels" . | nindent 4 }}
+    {{- include "readeck.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -13,5 +13,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "shiori.selectorLabels" . | nindent 4 }}
-
+    {{- include "readeck.selectorLabels" . | nindent 4 }}

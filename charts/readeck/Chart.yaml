@@ -1,0 +1,6 @@
+apiVersion: v2
+name: readeck
+description: A Helm chart for readeck, a simple web application that lets you save the precious readable content of web pages you like and want to keep forever.
+type: application
+version: 0.1.0
+appVersion: "0.20.3"

@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "shiori.fullname" . }}
+  name: {{ include "readeck.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "shiori.labels" . | nindent 4 }}
+    {{- include "readeck.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "shiori.selectorLabels" . | nindent 6 }}
+      {{- include "readeck.selectorLabels" . | nindent 6 }}
   {{- with .Values.updateStrategy }}
   strategy:
     {{- toYaml . | nindent 4 }}
@@ -19,12 +19,12 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: {{ include "shiori.checksum" . | quote }}
+        checksum/config: {{ include "readeck.checksum" . | quote }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "shiori.labels" . | nindent 8 }}
+        {{- include "readeck.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -33,7 +33,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "shiori.serviceAccountName" . }}
+      serviceAccountName: {{ include "readeck.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -66,7 +66,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.envFromConfigMap.data.READECK_SERVER_PORT | default 8000 | int64 }}
               protocol: TCP
           {{- with .Values.probes.liveness }}
           livenessProbe:
@@ -87,10 +87,10 @@ spec:
           {{- if or .Values.volumeMounts .Values.persistence.enabled }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
-              {{- if .Values.persistence.volumeMounts.shiori.enabled }}
-            - name: {{ include "shiori.fullname" . }}
-              mountPath: {{ .Values.persistence.volumeMounts.shiori.mountPath }}
-              subPath: {{ .Values.persistence.volumeMounts.shiori.subPath }}
+              {{- if .Values.persistence.volumeMounts.readeck.enabled }}
+            - name: {{ include "readeck.fullname" . }}
+              mountPath: {{ .Values.persistence.volumeMounts.readeck.mountPath }}
+              subPath: {{ .Values.persistence.volumeMounts.readeck.subPath }}
               {{- end }}
             {{- end }}
             {{- with .Values.volumeMounts }}
@@ -100,10 +100,10 @@ spec:
       {{- if or .Values.volumes .Values.persistence.enabled }}
       volumes:
         {{- if .Values.persistence.enabled }}
-        - name: {{ include "shiori.fullname" . }}
+        - name: {{ include "readeck.fullname" . }}
           {{- if .Values.persistence.claim.enabled }}
           persistentVolumeClaim:
-            claimName: {{ ternary (printf "%s" (include "shiori.fullname" .)) (.Values.persistence.existingClaim | quote) (empty .Values.persistence.existingClaim) }}
+            claimName: {{ ternary (printf "%s" (include "readeck.fullname" .)) (.Values.persistence.existingClaim | quote) (empty .Values.persistence.existingClaim) }}
           {{- else }}
           emptyDir: {}
           {{- end }}

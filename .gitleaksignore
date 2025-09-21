@@ -4,3 +4,10 @@
 /path/charts/leantime/examples/external-resources/leantime-env-from-vault.yaml:kubernetes-secret-yaml:2
 /github/workspace/charts/leantime/examples/external-resources/leantime-env-from-vault.yaml:generic-api-key:11
 /path/charts/leantime/examples/external-resources/leantime-env-from-vault.yaml:generic-api-key:11
+
+/github/workspace/charts/readeck/examples/external-resources/postgres-pguser-readeck.yaml:kubernetes-secret-yaml:2
+/path/charts/readeck/examples/external-resources/postgres-pguser-readeck.yaml:kubernetes-secret-yaml:2
+/github/workspace/charts/readeck/examples/external-resources/readeck-vault.yaml:generic-api-key:9
+/path/charts/readeck/examples/external-resources/readeck-vault.yaml:generic-api-key:9
+/github/workspace/charts/readeck/examples/external-resources/readeck-vault.yaml:kubernetes-secret-yaml:2
+/path/charts/readeck/examples/external-resources/readeck-vault.yaml:kubernetes-secret-yaml:2

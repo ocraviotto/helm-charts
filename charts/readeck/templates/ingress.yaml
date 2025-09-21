@@ -2,10 +2,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "shiori.fullname" . }}
+  name: {{ include "readeck.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "shiori.labels" . | nindent 4 }}
+    {{- include "readeck.labels" . | nindent 4 }}
   {{- with .Values.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -36,7 +36,7 @@ spec:
             {{- end }}
             backend:
               service:
-                name: {{ include "shiori.fullname" $ }}
+                name: {{ include "readeck.fullname" $ }}
                 port:
                   number: {{ $.Values.service.port }}
           {{- end }}

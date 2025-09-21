@@ -2,15 +2,15 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "shiori.fullname" . }}
+  name: {{ include "readeck.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "shiori.labels" . | nindent 4 }}
+    {{- include "readeck.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "shiori.fullname" . }}
+    name: {{ include "readeck.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

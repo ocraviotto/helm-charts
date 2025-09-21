@@ -1,0 +1,57 @@
+# Readeck Helm Chart
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+This is a Helm chart for [readeck](https://readeck.org), a tool to keep all that web content you’ll want to revisit in an hour, tomorrow, or in 20 years.
+
+## Introduction
+
+This chart bootstraps a Readeck deployment on a Kubernetes cluster using the Helm package manager.
+The chart itself has no dependencies, as Readeck can run with SQLite (which requires persistence), but it supports configuring a separate PostgreSQL database for better scalability.
+Though the chart takes care of multiple aspects of Readeck's configuration, make sure to read the [documentation](https://readeck.org/en/docs/),
+in particular in relation to the [configuration](https://readeck.org/en/docs/configuration).
+
+## Prerequisites
+
+* Kubernetes 1.23+
+* Helm 3.8.0+
+
+### Additionally
+
+If enabling persistence with claim enabled:
+
+* PV provisioner support in the underlying infrastructure
+
+## Installing the Chart
+
+To install the chart with the release name `readeck`:
+
+```bash
+helm install readeck oci://ghcr.io/ocraviotto/charts/readeck --version {{ template "chart.version" . }}
+```
+
+## Uninstalling the Chart
+
+To uninstall/delete the `readeck` release:
+
+```bash
+helm delete readeck
+```
+
+## Example
+
+The [external-resources example](examples/external-resources) contains a modified values file to use with a more production-like environment.
+Make sure to check it out if intending on a more serious use of Readeck.
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+{{ template "chart.valuesSection" . }}
