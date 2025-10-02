@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       has_patch: ${{ steps.check.outputs.has_patch }}
+      patch_artifact_id: ${{ steps.check.outputs.has_patch }}
     steps:
       - name: Check for "docs-patch" artifact
         id: check
@@ -26,14 +27,16 @@ jobs:
             "${{ github.event.workflow_run.artifacts_url }}")
 
           # See if any artifact has the name "docs-patch"
-          found=$(echo "$response" | jq '.artifacts | map(select(.name == "docs-patch")) | length')
+          artifact_id=$(echo "$response" | jq '.artifacts | map(select(.name == "docs-patch")) | .id')
 
-          if [ "$found" -gt 0 ]; then
-            echo "Artifact 'docs-patch' found"
-            echo "has_patch=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ -z "$artifact_id" ] || [ "$artifact_id" = "null" ]; then
             echo "Artifact 'docs-patch' not found"
             echo "has_patch=false" >> "$GITHUB_OUTPUT"
+            echo "patch_artifact_id=null" >> "$GITHUB_OUTPUT"
+          else
+            echo "Artifact 'docs-patch' found"
+            echo "has_patch=true" >> "$GITHUB_OUTPUT"
+            echo "patch_artifact_id=${artifact_id}" >> "$GITHUB_OUTPUT"
           fi
   apply-patch:
     needs: check-artifact
@@ -45,11 +48,20 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
-      - name: Download patch
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
-        with:
-          name: docs-patch
-          path: .
+      - name: Download patch artifact from triggering run
+        env:
+          PATCH_ID: ${{ needs.check-artifact.outputs.patch_artifact_id }}
+        run: |
+          echo "Artifact ID: $PATCH_ID"
+
+          # Download and unzip
+          curl -sSL \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -L "${{ github.event.workflow_run.artifacts_url }}/$PATCH_ID/zip" \
+            -o patch.zip
+
+          unzip patch.zip -d .
+          ls -l
 
       - name: Apply patch
         run: |
