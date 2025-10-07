@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       has_patch: ${{ steps.check.outputs.has_patch }}
-      patch_artifact_id: ${{ steps.check.outputs.has_patch }}
+      patch_artifact_id: ${{ steps.check.outputs.patch_artifact_id }}
     steps:
       - name: Check for "docs-patch" artifact
         id: check
