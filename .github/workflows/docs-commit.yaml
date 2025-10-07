@@ -27,7 +27,7 @@ jobs:
             "${{ github.event.workflow_run.artifacts_url }}")
 
           # See if any artifact has the name "docs-patch"
-          artifact_id=$(echo "$response" | jq '.artifacts | map(select(.name == "docs-patch")) | .id')
+          artifact_id=$(echo "$response" | jq '.artifacts | map(select(.name == "docs-patch"))[0] | .id')
 
           if [ -z "$artifact_id" ] || [ "$artifact_id" = "null" ]; then
             echo "Artifact 'docs-patch' not found"
