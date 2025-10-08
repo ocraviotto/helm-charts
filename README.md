@@ -23,7 +23,7 @@ All Helm charts are located in the `charts/` directory. Each chart resides in it
 <!-- CHARTS_TABLE_START -->
 | Chart | Description | Version | Packages |
 |-------|-------------|---------|----------|
-| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.11 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fente) |
+| [ente](charts/ente/README.md) | A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution. | 0.1.12 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fente) |
 | [leantime](charts/leantime/README.md) | A Helm chart for Kubernetes to deploy Leantime | 0.1.2 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fleantime) |
 | [readeck](charts/readeck/README.md) | A Helm chart for readeck, a simple web application that lets you save the precious readable content of web pages you like and want to keep forever. | 0.1.0 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Freadeck) |
 | [shiori](charts/shiori/README.md) | A Helm chart for shiori, a simple bookmark manager built with Go. | 0.1.2 | [ghcr.io](https://github.com/users/ocraviotto/packages/container/package/charts%2Fshiori) |

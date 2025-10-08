@@ -95,6 +95,7 @@ spec:
                 value: {{ include "ente.hostname.api" . }}
               {{- end }}
             periodSeconds: 30
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /ping
@@ -106,6 +107,7 @@ spec:
                 value: {{ include "ente.hostname.api" . }}
               {{- end }}
             periodSeconds: 30
+            failureThreshold: 5
           resources:
             {{- toYaml .Values.museum.resources | nindent 12 }}
           volumeMounts:

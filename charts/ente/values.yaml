@@ -30,7 +30,7 @@ museum:
     # These tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
     # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-server:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
     # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
-    tag: "0.0.20250929-94.1"
+    tag: "0.0.20251007-105.1"
   service:
     type: ClusterIP
     port: 8080
@@ -124,7 +124,7 @@ web:
     # The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
     # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
     # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
-    tag: "0.0.20250929-94.1"
+    tag: "0.0.20251007-105.1"
 
   # -- Web [service](https://kubernetes.io/docs/concepts/services-networking/service/) resource configuration
   # exposing only service type and ports to serve
@@ -367,17 +367,28 @@ postgresql:
   # NOTE: persistence is enabled by default so with a request of 8Gi
   Secondary: {}
 
-# -- Included MinIO configuration
+# -- Values to pass to the minio sub-chart.
+# See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
 # NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section
 minio:
   # -- In "production-like" environments you should modify the mino values if enabled
   # or even better, run MinIO via its own operator.
   enabled: true
-  # -- Values to pass to the minio sub-chart.
-  # See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
   image:
     # -- Required because of <https://github.com/bitnami/charts/issues/35164>
     repository: bitnamilegacy/minio
+  clientImage:
+    # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+    repository: bitnamilegacy/minio-client
+  defaultInitContainers:
+    volumePermissions:
+      image:
+        # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+        repository: bitnamilegacy/on-shell
+  console:
+    image:
+      # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+      repository: bitnamilegacy/minio-object-browser
   auth:
     # In production you should consider using an existingSecret or pass these via the cli instead of setting clear values below
     rootUser: changeme
