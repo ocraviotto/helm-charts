@@ -367,17 +367,28 @@ postgresql:
   # NOTE: persistence is enabled by default so with a request of 8Gi
   Secondary: {}
 
-# -- Included MinIO configuration
+# -- Values to pass to the minio sub-chart.
+# See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
 # NOTE: Because of <https://github.com/bitnami/charts/issues/35164> there will be more changes to this section
 minio:
   # -- In "production-like" environments you should modify the mino values if enabled
   # or even better, run MinIO via its own operator.
   enabled: true
-  # -- Values to pass to the minio sub-chart.
-  # See <https://github.com/bitnami/charts/tree/main/bitnami/minio>
   image:
     # -- Required because of <https://github.com/bitnami/charts/issues/35164>
     repository: bitnamilegacy/minio
+  clientImage:
+    # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+    repository: bitnamilegacy/minio-client
+  defaultInitContainers:
+    volumePermissions:
+      image:
+        # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+        repository: bitnamilegacy/on-shell
+  console:
+    image:
+      # -- Required because of <https://github.com/bitnami/charts/issues/35164>
+      repository: bitnamilegacy/minio-object-browser
   auth:
     # In production you should consider using an existingSecret or pass these via the cli instead of setting clear values below
     rootUser: changeme
