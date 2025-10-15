@@ -30,7 +30,7 @@ museum:
     # These tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
     # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-server:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
     # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
-    tag: "0.0.20251007-105.1"
+    tag: "0.0.20251014-109.1"
   service:
     type: ClusterIP
     port: 8080
@@ -124,7 +124,7 @@ web:
     # The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from:
     # e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br>
     # For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml>
-    tag: "0.0.20251007-105.1"
+    tag: "0.0.20251014-109.1"
 
   # -- Web [service](https://kubernetes.io/docs/concepts/services-networking/service/) resource configuration
   # exposing only service type and ports to serve
