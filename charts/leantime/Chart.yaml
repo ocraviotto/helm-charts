@@ -2,12 +2,12 @@ apiVersion: v2
 name: leantime
 description: A Helm chart for Kubernetes to deploy Leantime
 type: application
-version: 0.1.2
+version: 0.2.0
 appVersion: "3.5.12"
 
 dependencies:
 - name: mariadb
-  version: 22.0.0
+  version: 24.1.1
   # Currently looking for alternatives as Bitnami has decided to stop publishing charts and container images
   # see https://github.com/bitnami/charts/issues/35164
   repository: https://charts.bitnami.com/bitnami
