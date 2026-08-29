@@ -1,6 +1,6 @@
 # Readeck Helm Chart
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.20.3](https://img.shields.io/badge/AppVersion-0.20.3-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.23.1](https://img.shields.io/badge/AppVersion-0.23.1-informational?style=flat-square)
 
 This is a Helm chart for [readeck](https://readeck.org), a tool to keep all that web content you’ll want to revisit in an hour, tomorrow, or in 20 years.
 
@@ -27,7 +27,7 @@ If enabling persistence with claim enabled:
 To install the chart with the release name `readeck`:
 
 ```bash
-helm install readeck oci://ghcr.io/ocraviotto/charts/readeck --version 0.1.0
+helm install readeck oci://ghcr.io/ocraviotto/charts/readeck --version 0.2.0
 ```
 
 ## Uninstalling the Chart
