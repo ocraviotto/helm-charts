@@ -2,8 +2,8 @@ apiVersion: v2
 name: ente
 description: A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution.
 type: application
-version: 0.2.5
-appVersion: "0.0.20260826-330.1"  # This is the server build
+version: 0.2.6
+appVersion: "0.0.20260830-338.1"  # This is the server build
 
 dependencies:
   - name: postgresql
