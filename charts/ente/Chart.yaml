@@ -2,12 +2,12 @@ apiVersion: v2
 name: ente
 description: A Helm chart for Ente, a simple, encrypted, and self-hostable photo and video storage solution.
 type: application
-version: 0.2.6
-appVersion: "0.0.20260830-338.1"  # This is the server build
+version: 0.2.7
+appVersion: "0.0.20260830-343.1"  # This is the server build
 
 dependencies:
   - name: postgresql
-    version: "18.8.13"
+    version: "18.8.15"
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: postgresql.enabled
   - name: minio
