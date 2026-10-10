@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   check-artifact:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       has_patch: ${{ steps.check.outputs.has_patch }}
       patch_artifact_id: ${{ steps.check.outputs.patch_artifact_id }}
@@ -41,7 +41,7 @@ jobs:
   apply-patch:
     needs: check-artifact
     if: (github.event.workflow_run.conclusion == 'success') && (github.event.workflow_run.head_repository.full_name == 'ocraviotto/helm-charts') && (needs.check-artifact.outputs.has_patch == 'true')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       actions: read
