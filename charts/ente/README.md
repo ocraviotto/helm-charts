@@ -1,6 +1,6 @@
 # Ente Helm Chart
 
-![Version: 0.2.12](https://img.shields.io/badge/Version-0.2.12-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.20261010-406.1](https://img.shields.io/badge/AppVersion-0.0.20261010--406.1-informational?style=flat-square)
+![Version: 0.2.13](https://img.shields.io/badge/Version-0.2.13-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.20261010-406.1](https://img.shields.io/badge/AppVersion-0.0.20261010--406.1-informational?style=flat-square)
 
 This is a Helm chart for [Ente](https://ente.io), a simple, encrypted, and self-hostable photo and video storage solution.
 
@@ -25,7 +25,7 @@ If using the included PostgreSQL and/or MinIO:
 To install the chart with the release name `home-ente`:
 
 ```bash
-helm install home-ente oci://ghcr.io/ocraviotto/charts/ente --version 0.2.12
+helm install home-ente oci://ghcr.io/ocraviotto/charts/ente --version 0.2.13
 ```
 
 ## Uninstalling the Chart
@@ -122,10 +122,10 @@ Make sure to check it out if intending on a more serious use of Ente.
 | web.config.enteAlbumsOrigin | string | `""` | The value of the 'ENTE_ALBUMS_ORIGIN' env var Leave empty unless you know what you're doing and are willing to see where else this is used... @default <http://albums.ente.example.com> -> http(s)://albums.[baseDomain] |
 | web.config.enteApiOrigin | string | `""` | The value of the 'ENTE_API_ORIGIN' env var. Leave empty unless you know what you're doing and are willing to see where else this is used... @default <http://api.ente.example.com> -> http(s)://api.[baseDomain] |
 | web.config.nodeEnv | string | `"production"` | The value of the 'NODE_ENV' env var |
-| web.image | object | `{"pullPolicy":"IfNotPresent","registry":"ghcr.io","repository":"ocraviotto/container-images/ente-web","tag":"0.0.20261008-401.1"}` | The upstream image is built once a week. This image is built every time there is a new server deployed at ente.io as detected by [renovate](https://github.com/ocraviotto/container-images/blob/main/renovate.json) and the [GitHub workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml). |
+| web.image | object | `{"pullPolicy":"IfNotPresent","registry":"ghcr.io","repository":"ocraviotto/container-images/ente-web","tag":"0.0.20261010-406.1"}` | The upstream image is built once a week. This image is built every time there is a new server deployed at ente.io as detected by [renovate](https://github.com/ocraviotto/container-images/blob/main/renovate.json) and the [GitHub workflow here](https://github.com/ocraviotto/container-images/blob/main/.github/workflows/build-images.yml). |
 | web.image.registry | string | `"ghcr.io"` | Using GitHub Container Registry, same as the upstream [ente server image](https://github.com/ente-io/ente/pkgs/container/web) |
 | web.image.repository | string | `"ocraviotto/container-images/ente-web"` | My own repository to ensure timely builds [ghcr.io repository](https://github.com/ocraviotto/container-images/pkgs/container/container-images%2Fente-web). |
-| web.image.tag | string | `"0.0.20261008-401.1"` | Can be a tag or digest. The image is built every time we trigger a server build, and the source uses ente's main branch.</br> The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from: e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br> For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml> |
+| web.image.tag | string | `"0.0.20261010-406.1"` | Can be a tag or digest. The image is built every time we trigger a server build, and the source uses ente's main branch.</br> The tags are generated based on time build and build number + attempt. Read the image metadata to know what hash revision is built from: e.g. `skopeo inspect docker://ghcr.io/ocraviotto/container-images/ente-web:0.0.20250814-1 \| jq '.Labels."org.opencontainers.image.revision"'`</br> For details see: <https://github.com/ocraviotto/container-images/blob/main/specs/ente.yml> |
 | web.nodeSelector | object | `{}` | Web Pod [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) |
 | web.podSecurityContext | object | `{}` | Web pod level [securityContenxt](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod) used with both web and museum. |
 | web.replicaCount | int | `1` |  |
