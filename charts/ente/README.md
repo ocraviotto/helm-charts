@@ -1,6 +1,6 @@
 # Ente Helm Chart
 
-![Version: 0.2.13](https://img.shields.io/badge/Version-0.2.13-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.20261010-406.1](https://img.shields.io/badge/AppVersion-0.0.20261010--406.1-informational?style=flat-square)
+![Version: 0.2.14](https://img.shields.io/badge/Version-0.2.14-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.0.20261010-406.1](https://img.shields.io/badge/AppVersion-0.0.20261010--406.1-informational?style=flat-square)
 
 This is a Helm chart for [Ente](https://ente.io), a simple, encrypted, and self-hostable photo and video storage solution.
 
@@ -25,7 +25,7 @@ If using the included PostgreSQL and/or MinIO:
 To install the chart with the release name `home-ente`:
 
 ```bash
-helm install home-ente oci://ghcr.io/ocraviotto/charts/ente --version 0.2.13
+helm install home-ente oci://ghcr.io/ocraviotto/charts/ente --version 0.2.14
 ```
 
 ## Uninstalling the Chart
@@ -46,7 +46,7 @@ Make sure to check it out if intending on a more serious use of Ente.
 | Repository | Name | Version |
 |------------|------|---------|
 | oci://registry-1.docker.io/bitnamicharts | minio | 17.0.21 |
-| oci://registry-1.docker.io/bitnamicharts | postgresql | 18.12.4 |
+| oci://registry-1.docker.io/bitnamicharts | postgresql | 18.12.14 |
 
 ## Values
 
