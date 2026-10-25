@@ -5,6 +5,15 @@ metadata:
   labels:
     {{- include "leantime.labels" . | nindent 4 }}
 spec:
+  {{- $pluginMountPath := .Values.persistence.volumeMounts.plugins.mountPath }}
+  {{- $pluginsMountedByUser := false }}
+  {{- range .Values.volumeMounts }}
+    {{- with .mountPath }}
+      {{- if eq . $pluginMountPath }}
+        {{- $pluginsMountedByUser = true }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
@@ -16,7 +25,7 @@ spec:
       annotations:
         checksum/config: {{ include "leantime.checksum" . | quote }}
         {{- if .Values.phpIni.enabled }}
-        checksum/php-ini: {{ printf "%s%s" (.Values.phpIni.existingConfigMap | default "") (.Values.phpIni.data | default "") | sha256sum | quote }}
+        checksum/php-ini: {{ include "leantime.phpIniChecksum" . | quote }}
         {{- end }}
         {{- with .Values.podAnnotations }}
           {{- toYaml . | nindent 8 }}
@@ -69,14 +78,16 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+          {{- /*
+            No readinessProbe on purpose: traffic is accepted during install
+            and update. Liveness uses /health, which bypasses session, auth and
+            install/update redirects, but still returns 503 when the database
+            is unreachable.
+          */ -}}
           livenessProbe:
             httpGet:
-              # /health bypasses the middleware pipeline (session, install/update
-              # redirects, auth, rate limiting), so probes stay reliable during
-              # an in-progress database migration.
               path: {{ ternary "/healthCheck.php" "/health" .Values.testing.enabled }}
               port: http
-          {{- /* No readinessProbe, so traffic will be allowed during app install */ -}}
           {{- if not .Values.testing.enabled }}
           startupProbe:
             httpGet:
@@ -98,7 +109,7 @@ spec:
               readOnly: true
             {{- end }}
             {{- if .Values.persistence.enabled }}
-            {{- if .Values.persistence.volumeMounts.plugins.enabled }}
+            {{- if and .Values.persistence.volumeMounts.plugins.enabled (not $pluginsMountedByUser) }}
             - name: {{ include "leantime.fullname" . }}
               mountPath: {{ .Values.persistence.volumeMounts.plugins.mountPath }}
               subPath: {{ .Values.persistence.volumeMounts.plugins.subPath }}

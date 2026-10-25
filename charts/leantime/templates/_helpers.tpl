@@ -84,6 +84,24 @@ the limitations of that mode.
 {{- end }}
 
 {{/*
+Create a checksum of the PHP ini configuration.
+
+The file is mounted through subPath, so ConfigMap updates do not propagate
+into a running container. For a chart-managed ConfigMap the data is hashed
+directly; for an existing ConfigMap its current data is read with lookup so
+out-of-band changes also roll the pod on the next upgrade.
+*/}}
+{{- define "leantime.phpIniChecksum" -}}
+  {{- if .Values.phpIni.existingConfigMap -}}
+    {{- $configMap := lookup "v1" "ConfigMap" .Release.Namespace .Values.phpIni.existingConfigMap -}}
+    {{- $data := (($configMap | default dict).data | default dict) -}}
+    {{- toYaml $data | sha256sum -}}
+  {{- else -}}
+    {{- .Values.phpIni.data | sha256sum -}}
+  {{- end -}}
+{{- end }}
+
+{{/*
 Create a checksum of all configuration.
 This is used to trigger a rolling update when the config changes.
 */}}

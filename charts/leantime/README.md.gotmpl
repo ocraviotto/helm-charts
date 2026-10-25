@@ -24,16 +24,24 @@ If using the included MariaDB and/or enabling persistence with claim enabled:
 
 ## Upgrading from 3.5.12 to 3.12.0
 
-Take a database backup and scale to one replica before upgrading. The schema
-moves from `3.4.9` to `3.5.30`; run `php bin/leantime db:migrate` (or complete
-the `/update` screen as an admin) afterwards. `migration.enabled=true` runs it
-as a pre-upgrade hook.
+Back up the database before upgrading. The schema moves from `3.4.9` to
+`3.5.30`. `migration.enabled=true` runs `php bin/leantime db:migrate` as a
+pre-upgrade hook; otherwise run it after the rollout (or complete the
+`/update` screen as an admin).
+
+The hook runs before Helm applies the new ConfigMap/Secret, so it uses the
+previous release's database settings. Rotate DB credentials or change DB
+settings in a separate upgrade first. It also runs while the old pods are
+serving; scale the app to zero if writes during the schema update are a
+concern. A Helm rollback does not downgrade the schema.
 
 Breaking and behaviour-changing items in this range:
 
 | Area | Change | Action |
 |------|--------|--------|
 | Session timeout | `LEAN_SESSION_EXPIRATION` is **minutes**, not seconds. The old chart default `28800` meant ~20 days. | New default is `480` (8 hours). |
+| Session cookies | The chart used to force `LEAN_SESSION_SECURE=false`. It is now omitted so Leantime auto-detects Secure cookies. | Add `LEAN_SESSION_SECURE` through `env` only if you need to force it. |
+| PHP upload limits | With `phpIni.enabled=true`, the defaults are `post_max_size=32M` and `upload_max_filesize=24M`, down from the image's 100M. | Raise them in `phpIni.data` if users upload larger files. |
 | App URL | Leantime 3.10.2+ uses `LEAN_APP_URL` for origin checks; 3.10.3+ builds reset/invite links from it. | Set `envVarOverrides.appUrl` when a proxy rewrites the Host header. |
 | Trusted proxies | Public proxies/CDNs are no longer trusted by default. | Set `LEAN_TRUSTED_PROXIES` if your proxy egresses from a public address. |
 | Security release 3.10.2 | Origin/CSRF checks, session rotation, forced sign-out, invalidated reset links, OIDC `email_verified`/TLS validation, role-escalation limits, GET deletes → POST. | Expect one sign-out; review OIDC/LDAP/role settings and plugins with cross-site callbacks. |
@@ -41,8 +49,16 @@ Breaking and behaviour-changing items in this range:
 | Permissions | A fail-closed permission engine replaced ad-hoc role checks. | Re-test every role and plugin; `LEAN_PERMISSIONS_ENFORCE=false` gives audit-only mode temporarily. |
 | Templates/editor | TinyMCE was replaced by Tiptap (3.7) and all legacy templates moved to Blade (3.8). | Rewrite custom editor plugins and template/theme overrides. |
 | Timezones | 3.10.1 runs PHP in UTC; `LEAN_DEFAULT_TIMEZONE` is only a user default. | Existing non-UTC timestamps are not migrated and may display shifted. |
-| Plugins | 3.12 adds compatibility guards, a crash breaker and one-click/automatic updates. Updates write to `/var/www/html/app/Plugins`. | Keep `persistence.volumeMounts.plugins.enabled=true` or bake plugins into the image. |
-| PHP runtime | The 3.12.0 image was rebuilt on 2026-10-21 with PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. The tag is mutable. | Keep `image.pullPolicy=Always`, or pin `image.digest`; test plugins against PHP 8.4. |
+| Plugins | 3.12 adds compatibility guards, a crash breaker and one-click/automatic updates. Updates write to `/var/www/html/app/Plugins`. | Enable `persistence.volumeMounts.plugins.enabled` only for in-place updates. Leave it disabled when baking plugins into the image or when a free-form `volumeMounts` entry mounts the same path. |
+| PHP runtime | The 3.12.0 image was rebuilt on 2026-10-21 with PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. The tag is mutable. | Keep `image.pullPolicy=Always`, or pin `image.digest` (digest pinning also allows `IfNotPresent`, avoiding registry and rate-limit failures); test plugins against PHP 8.4. |
+
+### Migration hook
+
+`migration.enabled=true` renders a `pre-upgrade` Job. It waits for the database
+port, handles `*_FILE` secret variables, runs `db:migrate --no-interaction`,
+and has `activeDeadlineSeconds: 240` (below Helm's default 5-minute timeout).
+Raise `migration.activeDeadlineSeconds` and pass a matching
+`helm upgrade --timeout` if your database is slow.
 
 ## Installing the Chart
 
