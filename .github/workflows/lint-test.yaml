@@ -136,19 +136,25 @@ jobs:
               php -r 'require "/var/www/html/app/Core/Configuration/AppSettings.php"; echo (new \Leantime\Core\Configuration\AppSettings())->dbVersion;' |
               tr -d '[:space:]'
           }
-
           # Reads the schema version recorded in the database.
           db_version() {
             local pod
             pod="$(kubectl -n "$ns" get pods -l app.kubernetes.io/name=mariadb -o jsonpath='{.items[0].metadata.name}')"
             printf "select value from zp_settings where \`key\`='db-version';\n" |
               kubectl -n "$ns" exec -i "$pod" -- bash -c \
-                'mariadb -uleantime -p"$(cat /opt/bitnami/mariadb/secrets/mariadb-password)" leantime -N' |
+                "mariadb -uleantime -p\"\$(cat /opt/bitnami/mariadb/secrets/mariadb-password)\" leantime -N" |
               tr -d '[:space:]'
           }
 
           from_schema="$(image_db_version)"
           echo "image $FROM_VERSION expects schema $from_schema"
+
+          # 3.5.12's console installer calls createDefaultProject(), which assumes
+          # a session user and crashes in CLI context. This test only needs the
+          # schema, so remove that call from the old pod before seeding.
+          kubectl -n "$ns" exec deploy/"$release" -- \
+            sed -i '/createDefaultProject(/d' \
+            /var/www/html/app/Command/MigrateCommand.php
 
           # Install the DB non-interactively with the previous app version.
           kubectl -n "$ns" exec deploy/"$release" -- \
