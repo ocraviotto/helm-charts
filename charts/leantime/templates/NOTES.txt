@@ -1,0 +1,24 @@
+{{- if and (not .Values.ingress.enabled) (not .Values.envVarOverrides.appUrl) }}
+WARNING: neither ingress.enabled nor envVarOverrides.appUrl is set.
+Leantime will learn its public URL at the first owner/admin login. Password
+reset and invitation emails are not sent until then, and form submissions are
+rejected if a reverse proxy rewrites the Host header. Set
+`envVarOverrides.appUrl` to the public URL users reach.
+{{- end }}
+
+{{- if not .Values.migration.enabled }}
+NOTE: automatic database migration is disabled.
+This release moves Leantime from schema 3.4.9 to 3.5.30. After the rollout,
+run the migration from an admin session (the /update screen) or with:
+
+  kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "leantime.fullname" . }} -- php bin/leantime db:migrate
+
+Scale to one replica and take a database backup before upgrading.
+{{- end }}
+
+{{- if not .Values.image.digest }}
+NOTE: the image is referenced by a mutable tag ({{ .Values.image.tag | default .Chart.AppVersion }}).
+Upstream rebuilt the 3.12.0 tag in place on 2026-10-21 for CVE-2026-109618 /
+CVE-2026-109619. The chart defaults image.pullPolicy to Always; pin
+`image.digest` if you need reproducible, immutable deployments.
+{{- end }}

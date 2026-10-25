@@ -15,6 +15,9 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include "leantime.checksum" . | quote }}
+        {{- if .Values.phpIni.enabled }}
+        checksum/php-ini: {{ printf "%s%s" (.Values.phpIni.existingConfigMap | default "") (.Values.phpIni.data | default "") | sha256sum | quote }}
+        {{- end }}
         {{- with .Values.podAnnotations }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -57,7 +60,7 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}{{ if .Values.image.digest }}@{{ .Values.image.digest }}{{ end }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
@@ -65,7 +68,10 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: {{ ternary "/healthCheck.php" "/" .Values.testing.enabled }}
+              # /health bypasses the middleware pipeline (session, install/update
+              # redirects, auth, rate limiting), so probes stay reliable during
+              # an in-progress database migration.
+              path: {{ ternary "/healthCheck.php" "/health" .Values.testing.enabled }}
               port: http
           {{- /* No readinessProbe, so traffic will be allowed during app install */ -}}
           {{- if not .Values.testing.enabled }}
@@ -80,8 +86,14 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if or .Values.volumeMounts .Values.persistence.enabled }}
+          {{- if or .Values.volumeMounts .Values.persistence.enabled .Values.phpIni.enabled }}
           volumeMounts:
+            {{- if .Values.phpIni.enabled }}
+            - name: php-ini
+              mountPath: /usr/local/etc/php/conf.d/zz-leantime.ini
+              subPath: zz-leantime.ini
+              readOnly: true
+            {{- end }}
             {{- if .Values.persistence.enabled }}
             {{- if .Values.persistence.volumeMounts.plugins.enabled }}
             - name: {{ include "leantime.fullname" . }}
@@ -103,8 +115,13 @@ spec:
               {{- toYaml . | nindent 12 }}
             {{- end }}
           {{- end }}
-      {{- if or .Values.volumes .Values.persistence.enabled }}
+      {{- if or .Values.volumes .Values.persistence.enabled .Values.phpIni.enabled }}
       volumes:
+        {{- if .Values.phpIni.enabled }}
+        - name: php-ini
+          configMap:
+            name: {{ .Values.phpIni.existingConfigMap | default (printf "%s-php-ini" (include "leantime.fullname" .)) }}
+        {{- end }}
         {{- if .Values.persistence.enabled }}
         - name: {{ include "leantime.fullname" . }}
           {{- if .Values.persistence.claim.enabled }}

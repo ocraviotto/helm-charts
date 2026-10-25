@@ -22,6 +22,28 @@ If using the included MariaDB and/or enabling persistence with claim enabled:
 
 * PV provisioner support in the underlying infrastructure
 
+## Upgrading from 3.5.12 to 3.12.0
+
+Take a database backup and scale to one replica before upgrading. The schema
+moves from `3.4.9` to `3.5.30`; run `php bin/leantime db:migrate` (or complete
+the `/update` screen as an admin) afterwards. `migration.enabled=true` runs it
+as a pre-upgrade hook.
+
+Breaking and behaviour-changing items in this range:
+
+| Area | Change | Action |
+|------|--------|--------|
+| Session timeout | `LEAN_SESSION_EXPIRATION` is **minutes**, not seconds. The old chart default `28800` meant ~20 days. | New default is `480` (8 hours). |
+| App URL | Leantime 3.10.2+ uses `LEAN_APP_URL` for origin checks; 3.10.3+ builds reset/invite links from it. | Set `envVarOverrides.appUrl` when a proxy rewrites the Host header. |
+| Trusted proxies | Public proxies/CDNs are no longer trusted by default. | Set `LEAN_TRUSTED_PROXIES` if your proxy egresses from a public address. |
+| Security release 3.10.2 | Origin/CSRF checks, session rotation, forced sign-out, invalidated reset links, OIDC `email_verified`/TLS validation, role-escalation limits, GET deletes → POST. | Expect one sign-out; review OIDC/LDAP/role settings and plugins with cross-site callbacks. |
+| JSON-RPC API | The legacy REST controllers were removed and only `@api` methods are callable. | Migrate API/MCP integrations. |
+| Permissions | A fail-closed permission engine replaced ad-hoc role checks. | Re-test every role and plugin; `LEAN_PERMISSIONS_ENFORCE=false` gives audit-only mode temporarily. |
+| Templates/editor | TinyMCE was replaced by Tiptap (3.7) and all legacy templates moved to Blade (3.8). | Rewrite custom editor plugins and template/theme overrides. |
+| Timezones | 3.10.1 runs PHP in UTC; `LEAN_DEFAULT_TIMEZONE` is only a user default. | Existing non-UTC timestamps are not migrated and may display shifted. |
+| Plugins | 3.12 adds compatibility guards, a crash breaker and one-click/automatic updates. Updates write to `/var/www/html/app/Plugins`. | Keep `persistence.volumeMounts.plugins.enabled=true` or bake plugins into the image. |
+| PHP runtime | The 3.12.0 image was rebuilt on 2026-10-21 with PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. The tag is mutable. | Keep `image.pullPolicy=Always`, or pin `image.digest`; test plugins against PHP 8.4. |
+
 ## Installing the Chart
 
 To install the chart with the release name `leantime`:
