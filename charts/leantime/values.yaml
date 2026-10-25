@@ -626,7 +626,10 @@ migration:
   # default `--timeout` of 300s.
   activeDeadlineSeconds: 240
   # -- Resources for the migration Job
-  resources: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 # -- This section is for setting up autoscaling more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>
 autoscaling:
