@@ -78,12 +78,10 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-          {{- /*
-            No readinessProbe on purpose: traffic is accepted during install
-            and update. Liveness uses /health, which bypasses session, auth and
-            install/update redirects, but still returns 503 when the database
-            is unreachable.
-          */ -}}
+          # No readinessProbe on purpose: traffic is accepted during install and
+          # update. Liveness uses /health, which bypasses session, auth and
+          # install/update redirects, but still returns 503 when the database is
+          # unreachable.
           livenessProbe:
             httpGet:
               path: {{ ternary "/healthCheck.php" "/health" .Values.testing.enabled }}
