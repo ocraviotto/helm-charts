@@ -11,7 +11,7 @@ NOTE: automatic database migration is disabled.
 This release moves Leantime from schema 3.4.9 to 3.5.30. After the rollout,
 run the migration from an admin session (the /update screen) or with:
 
-  kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "leantime.fullname" . }} -- php bin/leantime db:migrate
+    kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "leantime.fullname" . }} -- php bin/leantime db:migrate
 
 Scale to one replica and take a database backup before upgrading.
 {{- end }}
