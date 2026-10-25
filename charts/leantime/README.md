@@ -1,6 +1,6 @@
 # Leantime Helm Chart
 
-![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.12.0](https://img.shields.io/badge/AppVersion-3.12.0-informational?style=flat-square)
+![Version: 0.2.1](https://img.shields.io/badge/Version-0.2.1-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 3.12.0](https://img.shields.io/badge/AppVersion-3.12.0-informational?style=flat-square)
 
 This is a Helm chart for [Leantime](https://leantime.io), a goals focused project management system for non-project managers.
 Building with ADHD, Autism, and dyslexia in mind.
@@ -24,15 +24,23 @@ If using the included MariaDB and/or enabling persistence with claim enabled:
 ## Upgrading from 3.5.12 to 3.12.0
 
 Back up the database before upgrading. The schema moves from `3.4.9` to
-`3.5.30`. `migration.enabled=true` runs `php bin/leantime db:migrate` as a
-pre-upgrade hook; otherwise run it after the rollout (or complete the
-`/update` screen as an admin).
+`3.5.30`. `migration.enabled=true` runs `php bin/leantime db:migrate` and
+clears the installation cache as a pre-upgrade hook; otherwise run the
+migration after the rollout (or complete the `/update` screen as an admin)
+and clear the cache once with `php bin/leantime cache:clear installation`.
 
 The hook runs before Helm applies the new ConfigMap/Secret, so it uses the
 previous release's database settings. Rotate DB credentials or change DB
 settings in a separate upgrade first. It also runs while the old pods are
 serving; scale the app to zero if writes during the schema update are a
 concern. A Helm rollback does not downgrade the schema.
+
+The cache clear is required because Leantime caches its domain route list
+forever in the `installation` store. When that store is Redis-backed, the
+cache survives pod restarts; an in-place upgrade would otherwise keep the old
+domain list and never register routes from new domains such as `Status`
+(`/health`). If an existing installation already runs 3.12.0 and `/health`
+returns 404, run `php bin/leantime cache:clear installation` once.
 
 Breaking and behaviour-changing items in this range:
 
@@ -50,21 +58,27 @@ Breaking and behaviour-changing items in this range:
 | Timezones | 3.10.1 runs PHP in UTC; `LEAN_DEFAULT_TIMEZONE` is only a user default. | Existing non-UTC timestamps are not migrated and may display shifted. |
 | Plugins | 3.12 adds compatibility guards, a crash breaker and one-click/automatic updates. Updates write to `/var/www/html/app/Plugins`. | Enable `persistence.volumeMounts.plugins.enabled` only for in-place updates. Leave it disabled when baking plugins into the image or when a free-form `volumeMounts` entry mounts the same path. |
 | PHP runtime | The 3.12.0 image was rebuilt on 2026-10-21 with PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. The tag is mutable. | Keep `image.pullPolicy=Always`, or pin `image.digest` (digest pinning also allows `IfNotPresent`, avoiding registry and rate-limit failures); test plugins against PHP 8.4. |
+| Health probes | 0.2.1 clears the stale domain-route cache in the migration hook and uses TCP for liveness, `/health` for readiness and `/healthCheck.php` for startup. | Keep `migration.enabled=true` during upgrades. If `/health` already returns 404 on an existing 3.12 install, clear the installation cache once. |
 
 ### Migration hook
 
 `migration.enabled=true` renders a `pre-upgrade` Job. It waits for the database
 port, handles `*_FILE` secret variables, runs `db:migrate --no-interaction`,
-and has `activeDeadlineSeconds: 240` (below Helm's default 5-minute timeout).
-Raise `migration.activeDeadlineSeconds` and pass a matching
-`helm upgrade --timeout` if your database is slow.
+clears the installation cache, and has `activeDeadlineSeconds: 240` (below
+Helm's default 5-minute timeout). Raise `migration.activeDeadlineSeconds` and
+pass a matching `helm upgrade --timeout` if your database is slow.
+
+Clearing the installation cache is what registers routes from domains added by
+the new image. This matters for `/health` in 3.12.0: the `Status` domain did not
+exist in 3.5.12, and a Redis-backed `domainRoutes` cache from the old install
+would otherwise survive the rollout and make `/health` return 404.
 
 ## Installing the Chart
 
 To install the chart with the release name `leantime`:
 
 ```bash
-helm install leantime oci://ghcr.io/ocraviotto/charts/leantime --version 0.2.0
+helm install leantime oci://ghcr.io/ocraviotto/charts/leantime --version 0.2.1
 ```
 
 ## Uninstalling the Chart
@@ -220,7 +234,7 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | mariadb.image.repository | string | `"bitnamilegacy/mariadb"` | Required because of <https://github.com/bitnami/charts/issues/35164> |
 | mariadb.primary | object | `{}` | Primary values if different from defaults. NOTE: persistence is enabled by default so with a request of 8Gi |
 | mariadb.secondary | object | `{}` | Secondary values if different from defaults NOTE: persistence is enabled by default so with a request of 8Gi |
-| migration | object | `{"activeDeadlineSeconds":240,"backoffLimit":3,"enabled":false,"resources":{"requests":{"cpu":"100m","memory":"256Mi"}}}` | Run `php bin/leantime db:migrate` as a pre-upgrade hook. The hook runs before the new ConfigMap/Secret is applied, so it uses the previous release's database settings. Rotate DB credentials/settings in a separate upgrade first. It also runs while the old pods are serving; scale the app to zero if writes during the schema update are a concern. A Helm rollback does not downgrade the schema, so back up the database. |
+| migration | object | `{"activeDeadlineSeconds":240,"backoffLimit":3,"enabled":false,"resources":{"requests":{"cpu":"100m","memory":"256Mi"}}}` | Run `php bin/leantime db:migrate` as a pre-upgrade hook and clear the installation cache so routes from new domains (including /health) are loaded. The hook runs before the new ConfigMap/Secret is applied, so it uses the previous release's database settings. Rotate DB credentials/settings in a separate upgrade first. It also runs while the old pods are serving; scale the app to zero if writes during the schema update are a concern. A Helm rollback does not downgrade the schema, so back up the database. |
 | migration.activeDeadlineSeconds | int | `240` | Maximum time in seconds for the migration Job. Keep this below Helm's default `--timeout` of 300s. |
 | migration.backoffLimit | int | `3` | Number of retries before the upgrade fails |
 | migration.enabled | bool | `false` | Enable the pre-upgrade database migration Job. |
@@ -264,7 +278,7 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | serviceAccount.automount | bool | `true` | Automatically mount a ServiceAccount's API credentials? |
 | serviceAccount.create | bool | `true` | Specifies whether a service account should be created |
 | serviceAccount.name | string | `""` | The name of the service account to use. If not set and create is true, a name is generated using the fullname template |
-| testing | object | `{"enabled":false}` | Should be set to true ONLY for CI/CD chart testing. When enabled, the probe path check is /healthCheck.php, which will always return 200 if the server is up regardless of internal errors. In production we'd like to ensure probes fail on e.g. a database error. |
+| testing | object | `{"enabled":false}` | Should be set to true ONLY for CI/CD chart testing. When enabled, readiness uses /healthCheck.php, which always returns 200 if the server is up regardless of internal errors. In production readiness uses /health so the pod leaves the Service when the database is unreachable; liveness is a TCP check and does not restart pods on a database outage. |
 | tolerations | list | `[]` | Pod [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) |
 | volumeMounts | list | `[]` | Additional volumeMounts on the output Deployment definition. |
 | volumes | list | `[]` | Additional volumes on the output Deployment definition. |

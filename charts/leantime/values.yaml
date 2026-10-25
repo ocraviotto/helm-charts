@@ -79,7 +79,7 @@ env: {}
   #   valueFrom:
   #     secretKeyRef:
   #       name: my-secret
-  #       key: oidcClientSecret
+  #       key: oidClientSecret
   # - name: LEAN_REDIS_PASSWORD
   #   valueFrom:
   #     secretKeyRef:
@@ -584,9 +584,10 @@ resources: {}
   #   memory: 128Mi
 
 # -- Should be set to true ONLY for CI/CD chart testing.
-# When enabled, the probe path check is /healthCheck.php, which will always return 200
-# if the server is up regardless of internal errors.
-# In production we'd like to ensure probes fail on e.g. a database error.
+# When enabled, readiness uses /healthCheck.php, which always returns 200 if the
+# server is up regardless of internal errors. In production readiness uses
+# /health so the pod leaves the Service when the database is unreachable;
+# liveness is a TCP check and does not restart pods on a database outage.
 testing:
   enabled: false
 
@@ -611,7 +612,8 @@ phpIni:
     max_input_nesting_level=64
     max_file_uploads=20
 
-# -- Run `php bin/leantime db:migrate` as a pre-upgrade hook.
+# -- Run `php bin/leantime db:migrate` as a pre-upgrade hook and clear the
+# installation cache so routes from new domains (including /health) are loaded.
 # The hook runs before the new ConfigMap/Secret is applied, so it uses the
 # previous release's database settings. Rotate DB credentials/settings in a
 # separate upgrade first. It also runs while the old pods are serving; scale
