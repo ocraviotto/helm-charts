@@ -7,8 +7,8 @@ render() {
   helm template "$release" "$chart" --dependency-update "$@"
 }
 
-if [[ -n "$(render | yq e 'select(.kind == "Job")' -)" ]]; then
-  echo "FAIL: a Job was rendered with migration.enabled=false" >&2
+if [[ -n "$(render | yq e 'select(.kind == "Job" and (.metadata.name | endswith("-migrate")))' -)" ]]; then
+  echo "FAIL: a migration Job was rendered with migration.enabled=false" >&2
   exit 1
 fi
 
@@ -21,7 +21,7 @@ job="$(
     --set-json 'affinity={"nodeAffinity":{"requiredDuringSchedulingIgnoredDuringExecution":{"nodeSelectorTerms":[{"matchExpressions":[{"key":"kubernetes.io/os","operator":"In","values":["linux"]}]}]}}}' \
     --set-json 'volumes=[{"name":"db-ca","configMap":{"name":"db-ca"}}]' \
     --set-json 'volumeMounts=[{"name":"db-ca","mountPath":"/etc/db-ca","readOnly":true}]' \
-    | yq e 'select(.kind == "Job")' -
+    | yq e 'select(.kind == "Job" and (.metadata.name | endswith("-migrate")))' -
 )"
 
 if [[ -z "$job" ]]; then
