@@ -7,4 +7,4 @@ validate-maintainers: false
 chart-repos:
   - bitnami=https://charts.bitnami.com/bitnami
 additional-commands:
-  - bash bin/test-chart-additions.sh {{ .Path }}
+  - bash bin/test-chart-additions {{ .Path }}
