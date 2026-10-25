@@ -12,6 +12,8 @@ image:
   # Leantime tags are mutable: upstream rebuilt the `3.12.0` tag in place on
   # 2026-10-21 to ship PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619.
   # Keep `Always` for tag-based installs so nodes do not keep a cached image.
+  # For air-gapped or Docker Hub rate-limited environments, mirror the image
+  # and pin `image.digest`; that also permits `IfNotPresent`.
   pullPolicy: Always
   # -- Used to override the image tag.
   # @default --  value of chart appVersion
@@ -108,7 +110,8 @@ envFromConfigMap:
   data:
     # -- Base URL, needed for subfolder or proxy installs (including http:// or https://)
     # You can either modify this string or override (preferred) with `envVarOverrides.appUrl`
-    # @default -- The value of ingress.hosts[0].host if ingress is enabled.
+    # @default -- The ingress URL when ingress is enabled; otherwise empty
+    # (Leantime learns the URL at the first admin login).
     LEAN_APP_URL: '{{ include "leantime.appUrl" . }}'
     # -- Debug flag.
     LEAN_DEBUG: "0"
@@ -542,10 +545,11 @@ persistence:
     # building and privately hosting the image.
     plugins:
       # -- Whether to enable the plugins volumeMount.
-      # Leantime 3.12 can update plugins in place; without this mount those
-      # updates live only in the container filesystem and are lost on restart.
-      # It requires a shared volume (ReadWriteMany) if you scale beyond one replica.
-      enabled: true
+      # Enable this to persist Leantime 3.12's in-place plugin updates. Leave it
+      # disabled when plugins are baked into the image or when a free-form
+      # `volumeMounts` entry already mounts /var/www/html/app/Plugins; the chart
+      # skips its own mount when a user mount targets the same path.
+      enabled: false
       # -- Path within the container at which the volume with the plugins should be mounted. Must not contain ':'
       mountPath: /var/www/html/app/Plugins
       # -- Path within the volume from which plugins should be mounted.
@@ -596,7 +600,8 @@ phpIni:
   # -- Mount an extra ini file at /usr/local/etc/php/conf.d/zz-leantime.ini
   enabled: false
   # -- Use an existing ConfigMap instead of creating one. It must contain the
-  # key `zz-leantime.ini`.
+  # key `zz-leantime.ini`. Changes to its data are detected with `lookup` and
+  # roll the pod on the next upgrade.
   existingConfigMap: ""
   # -- Contents of the generated ConfigMap key `zz-leantime.ini`.
   data: |
@@ -607,15 +612,21 @@ phpIni:
     max_file_uploads=20
 
 # -- Run `php bin/leantime db:migrate` as a pre-upgrade hook.
-# Leantime 3.5.12 (schema 3.4.9) to 3.12.0 (schema 3.5.30) crosses many
-# migrations. Scaling to one replica during the upgrade is strongly recommended;
-# Helm cannot enforce that for you.
+# The hook runs before the new ConfigMap/Secret is applied, so it uses the
+# previous release's database settings. Rotate DB credentials/settings in a
+# separate upgrade first. It also runs while the old pods are serving; scale
+# the app to zero if writes during the schema update are a concern. A Helm
+# rollback does not downgrade the schema, so back up the database.
 migration:
+  # -- Enable the pre-upgrade database migration Job.
   enabled: false
   # -- Number of retries before the upgrade fails
-  backoffLimit: 1
-  # -- Maximum time in seconds for the migration job
-  activeDeadlineSeconds: 900
+  backoffLimit: 3
+  # -- Maximum time in seconds for the migration Job. Keep this below Helm's
+  # default `--timeout` of 300s.
+  activeDeadlineSeconds: 240
+  # -- Resources for the migration Job
+  resources: {}
 
 # -- This section is for setting up autoscaling more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>
 autoscaling:
