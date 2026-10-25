@@ -1,0 +1,11 @@
+{{- if and .Values.phpIni.enabled (not .Values.phpIni.existingConfigMap) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "leantime.fullname" . }}-php-ini
+  labels:
+    {{- include "leantime.labels" . | nindent 4 }}
+data:
+  zz-leantime.ini: |
+{{ .Values.phpIni.data | indent 4 }}
+{{- end -}}

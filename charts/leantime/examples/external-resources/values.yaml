@@ -1,3 +1,17 @@
+envVarOverrides:
+  # Leantime 3.10+ uses this for origin checks and email links. Set it even
+  # though the ingress host below could be used as a fallback.
+  appUrl: "https://leantime.example.com"
+
+# Extra PHP hardening (CVE-2026-109618 / CVE-2026-109619 mitigation paths).
+# The 3.12.0 image already ships PHP 8.4.27; this is defense in depth.
+phpIni:
+  enabled: true
+
+# Run the schema migration as a Helm pre-upgrade hook.
+migration:
+  enabled: true
+
 envFromConfigMap:
   data:
     # mysql --host="$LEAN_DB_HOST" --user="$LEAN_DB_USER" --database="$LEAN_DB_DATABASE" --password="$LEAN_DB_PASSWORD" --port="$LEAN_DB_PORT" --ssl-ca="$LEAN_DB_MYSQL_ATTR_SSL_CA"

@@ -55,6 +55,156 @@ jobs:
       - name: Run chart-testing (install)
         run: ct install --config .github/linters/ct.yaml --helm-extra-set-args "--set=testing.enabled=true"
 
+  migration-test:
+    name: Migration Hook Test
+    runs-on: ubuntu-24.04
+    needs: docs-check
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve migration versions
+        id: versions
+        run: |
+          set -euo pipefail
+          base_branch="${{ github.base_ref }}"
+          if [[ -z "$base_branch" ]]; then
+            echo "github.base_ref is empty; this test expects a pull_request event" >&2
+            exit 1
+          fi
+
+          git fetch --no-tags origin "$base_branch"
+
+          from="$(git show "origin/$base_branch:charts/leantime/Chart.yaml" | yq e '.appVersion' -)"
+          to="$(yq e '.appVersion' charts/leantime/Chart.yaml)"
+
+          if [[ -z "$from" || "$from" == "null" || -z "$to" || "$to" == "null" ]]; then
+            echo "Could not resolve appVersion (from=$from to=$to)" >&2
+            exit 1
+          fi
+
+          echo "from=$from" >> "$GITHUB_OUTPUT"
+          echo "to=$to" >> "$GITHUB_OUTPUT"
+          echo "Migration test: $from -> $to"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+
+      - name: Create kind cluster
+        uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        with:
+          cluster_name: migration-test
+
+      - name: Build chart dependencies
+        run: helm dependency build charts/leantime
+
+      - name: Install the previous app version
+        env:
+          FROM_VERSION: ${{ steps.versions.outputs.from }}
+        run: |
+          set -euo pipefail
+          helm install leantime-migration charts/leantime \
+            --namespace leantime-migration \
+            --create-namespace \
+            --set testing.enabled=true \
+            --set image.tag="$FROM_VERSION" \
+            --set image.pullPolicy=Always \
+            --wait --timeout 10m
+
+          kubectl -n leantime-migration rollout status statefulset/leantime-migration-mariadb --timeout=5m
+          kubectl -n leantime-migration rollout status deploy/leantime-migration --timeout=5m
+
+      - name: Seed, upgrade with the hook, verify
+        env:
+          FROM_VERSION: ${{ steps.versions.outputs.from }}
+          TO_VERSION: ${{ steps.versions.outputs.to }}
+        run: |
+          set -euo pipefail
+          ns=leantime-migration
+          release=leantime-migration
+
+          # Reads the schema version the running image expects from its own code.
+          image_db_version() {
+            kubectl -n "$ns" exec deploy/"$release" -- \
+              php -r 'require "/var/www/html/app/Core/Configuration/AppSettings.php"; echo (new \Leantime\Core\Configuration\AppSettings())->dbVersion;' |
+              tr -d '[:space:]'
+          }
+          # Reads the schema version recorded in the database.
+          db_version() {
+            local pod
+            pod="$(kubectl -n "$ns" get pods -l app.kubernetes.io/name=mariadb -o jsonpath='{.items[0].metadata.name}')"
+            printf "select value from zp_settings where \`key\`='db-version';\n" |
+              kubectl -n "$ns" exec -i "$pod" -- bash -c \
+                "mariadb -uleantime -p\"\$(cat /opt/bitnami/mariadb/secrets/mariadb-password)\" leantime -N" |
+              tr -d '[:space:]'
+          }
+
+          from_schema="$(image_db_version)"
+          echo "image $FROM_VERSION expects schema $from_schema"
+
+          # 3.5.12's console installer calls createDefaultProject(), which assumes
+          # a session user and crashes in CLI context. This test only needs the
+          # schema, so remove that call from the old pod before seeding.
+          kubectl -n "$ns" exec deploy/"$release" -- \
+            sed -i '/createDefaultProject(/d' \
+            /var/www/html/app/Command/MigrateCommand.php
+
+          # Install the DB non-interactively with the previous app version.
+          kubectl -n "$ns" exec deploy/"$release" -- \
+            php bin/leantime db:migrate \
+              --email=admin@example.com \
+              --password='MigrationTest1!' \
+              --company-name='Migration Test' \
+              --first-name='Migration' \
+              --last-name='Test'
+
+          before="$(db_version)"
+          echo "schema before upgrade: $before (expected $from_schema)"
+          test "$before" = "$from_schema"
+
+          if [[ "$FROM_VERSION" == "$TO_VERSION" ]]; then
+            echo "::warning::FROM_VERSION and TO_VERSION are both $TO_VERSION; migration is a no-op"
+          fi
+
+          # This runs the pre-upgrade hook against the old database.
+          helm upgrade "$release" charts/leantime \
+            --namespace "$ns" \
+            --set testing.enabled=true \
+            --set migration.enabled=true \
+            --set image.tag="$TO_VERSION" \
+            --set image.pullPolicy=Always \
+            --wait --timeout 15m
+
+          to_schema="$(image_db_version)"
+          after="$(db_version)"
+          echo "image $TO_VERSION expects schema $to_schema"
+          echo "schema after upgrade: $after"
+          test "$after" = "$to_schema"
+
+          image="$(kubectl -n "$ns" get deploy "$release" -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          echo "app image: $image"
+          case "$image" in
+            *":$TO_VERSION"*) ;;
+            *) echo "unexpected app image: $image" >&2; exit 1 ;;
+          esac
+
+      - name: Collect diagnostics
+        if: failure()
+        run: |
+          ns=leantime-migration
+          kubectl -n "$ns" get pods,jobs,statefulsets,deployments -o wide || true
+          kubectl -n "$ns" describe pods || true
+          kubectl -n "$ns" logs -l app.kubernetes.io/name=leantime --tail=200 || true
+          kubectl -n "$ns" logs job/leantime-migration-migrate --tail=200 || true
+          kubectl -n "$ns" logs -l app.kubernetes.io/name=mariadb --tail=100 || true
+
   super-linter:
     name: Lint All
     runs-on: ubuntu-24.04

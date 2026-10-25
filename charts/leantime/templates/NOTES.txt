@@ -1,0 +1,31 @@
+{{- if and (not .Values.ingress.enabled) (not .Values.envVarOverrides.appUrl) }}
+WARNING: neither ingress.enabled nor envVarOverrides.appUrl is set.
+Leantime will learn its public URL at the first owner/admin login. Password
+reset and invitation emails are not sent until then, and form submissions are
+rejected if a reverse proxy rewrites the Host header. Set
+`envVarOverrides.appUrl` to the public URL users reach.
+{{- end }}
+
+{{- if .Release.IsUpgrade }}
+WARNING: a Helm rollback restores manifests but does not downgrade the
+Leantime database schema. Back up the database before upgrading and restore
+it if you need to roll back.
+
+{{- if .Values.migration.enabled }}
+The pre-upgrade migration Job uses the previous release's ConfigMap and
+Secret. Apply database credential or setting changes in a separate upgrade
+first, and scale the app to zero if writes during the schema update are a
+concern.
+{{- else }}
+NOTE: automatic database migration is disabled. After the rollout, run:
+
+    kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "leantime.fullname" . }} -- php bin/leantime db:migrate --no-interaction
+{{- end }}
+{{- end }}
+
+{{- if not .Values.image.digest }}
+NOTE: the image is referenced by a mutable tag ({{ .Values.image.tag | default .Chart.AppVersion }}).
+Upstream rebuilt the 3.12.0 tag in place on 2026-10-21 for CVE-2026-109618 /
+CVE-2026-109619. The chart defaults image.pullPolicy to Always; pin
+`image.digest` if you need reproducible, immutable deployments.
+{{- end }}

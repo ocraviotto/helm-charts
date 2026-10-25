@@ -3,16 +3,27 @@ replicaCount: 1
 
 # -- This sets the container image more information can be found here: <https://kubernetes.io/docs/concepts/containers/images/>
 image:
-  # -- We use the upstream leantime by default. Images are built from this repository: <https://github.com/Leantime/docker-leantime>
-  # NOTE: This might change as work started to move the configuration to the main repository.
+  # -- We use the upstream leantime image by default. Images are built from
+  # <https://github.com/Leantime/leantime/tree/master/.docker>.
   repository: leantime/leantime
   # -- Set to allow to easily change registry and in our case, mainly to support renovate regular expressions (not required for the Docker hub).
   registry: docker.io
   # -- This sets the pull policy for images.
-  pullPolicy: IfNotPresent
+  # Leantime tags are mutable: upstream rebuilt the `3.12.0` tag in place on
+  # 2026-10-21 to ship PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619.
+  # Keep `Always` for tag-based installs so nodes do not keep a cached image.
+  # For air-gapped or Docker Hub rate-limited environments, mirror the image
+  # and pin `image.digest`; that also permits `IfNotPresent`.
+  pullPolicy: Always
   # -- Used to override the image tag.
   # @default --  value of chart appVersion
   tag: ""
+  # -- Optional image digest (e.g. `sha256:...`). When set it is appended to the
+  # tag, making the deployment immutable. The 3.12.0 digest observed on
+  # 2026-10-24 was
+  # `sha256:8e093293224cf48a24cfac7f32631aa5335014a065cd62b8ced4a74e4d548b80`;
+  # verify it before pinning.
+  digest: ""
 
 # -- This is for the secrets for pulling an image from a private repository more information can be found here: <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/>
 imagePullSecrets: []
@@ -68,7 +79,7 @@ env: {}
   #   valueFrom:
   #     secretKeyRef:
   #       name: my-secret
-  #       key: oidClientSecret
+  #       key: oidcClientSecret
   # - name: LEAN_REDIS_PASSWORD
   #   valueFrom:
   #     secretKeyRef:
@@ -93,13 +104,14 @@ envFromConfigMap:
   # -- Additional annotations to add to the generated ConfigMap
   cmAnnotations: {}
   # -- The default contents for configMap. Based on
-  # [Leantime's sample.env](https://github.com/Leantime/docker-leantime/blob/master/sample.env)
+  # [Leantime's sample.env](https://github.com/Leantime/leantime/blob/master/config/sample.env)
   # Values support helm templating.
   # NOTE: Make sure these are all strings!
   data:
     # -- Base URL, needed for subfolder or proxy installs (including http:// or https://)
     # You can either modify this string or override (preferred) with `envVarOverrides.appUrl`
-    # @default -- The value of ingress.hosts[0].host if ingress is enabled.
+    # @default -- The ingress URL when ingress is enabled; otherwise empty
+    # (Leantime learns the URL at the first admin login).
     LEAN_APP_URL: '{{ include "leantime.appUrl" . }}'
     # -- Debug flag.
     LEAN_DEBUG: "0"
@@ -109,14 +121,18 @@ envFromConfigMap:
     LEAN_DB_HOST: '{{ include "leantime.db.host" . }}'
     # -- Database name
     LEAN_DB_DATABASE: '{{ include "leantime.db.name" . }}'
-    # -- Database port
+    # -- Database port (3306 for MySQL/MariaDB, 5432 for PostgreSQL)
     LEAN_DB_PORT: "3306"
 
-    # -- How many seconds after inactivity should we logout?  28800seconds = 8hours
-    LEAN_SESSION_EXPIRATION: "28800"
-    # -- Serve cookies via https only? Set to true when using https, set to false when using http.
-    # NOTE: If you're terminating TLS at the ingress, leave `false`!
-    LEAN_SESSION_SECURE: "false"
+    # -- Session idle timeout in MINUTES. Leantime forwards this to Laravel's
+    # `session.lifetime`, which is minutes-based. 480 = 8 hours.
+    # WARNING: values before chart 0.2.0 used seconds (28800), which Leantime
+    # interpreted as 28800 minutes (~20 days). Do not restore that value.
+    LEAN_SESSION_EXPIRATION: "480"
+    # LEAN_SESSION_SECURE is intentionally omitted so Leantime auto-detects it
+    # from the request (and LEAN_APP_URL). Add it through `env` to force it:
+    #   - name: LEAN_SESSION_SECURE
+    #     value: "true"
 
     ## Optional Configuration, you may omit these from your .env file
     ## Default Settings
@@ -130,6 +146,21 @@ envFromConfigMap:
     LEAN_LOG_PATH: ""
     # -- If true then don't show the login form (useful only if additional auth method[s] are available)
     LEAN_DISABLE_LOGIN_FORM: "false"
+    # -- Comma-separated log channels (single, syslog, sentry, stderr). `stderr`
+    # is useful for container-native log collection.
+    LEAN_LOG_CHANNELS: "single,syslog,sentry"
+    # -- Write PHP deprecation notices to logs/deprecations.log (also enabled by LEAN_DEBUG)
+    LEAN_LOG_DEPRECATIONS: "0"
+    # -- Force HSTS even when Leantime does not see HTTPS. HSTS is enabled
+    # automatically for HTTPS requests, so this is normally unnecessary.
+    LEAN_HSTS_ENABLED: "false"
+    # -- Enforce permission-engine denials (403/JSON-RPC -32001). Set false only
+    # for audit/log-only mode while migrating custom roles.
+    LEAN_PERMISSIONS_ENFORCE: "true"
+    # -- Refresh page content in place after a modal closes (false = full reload).
+    LEAN_SOFT_RELOAD: "true"
+    # -- Set to false in airgapped environments to disable the external news feed.
+    LEAN_NEWS_ENABLED: "true"
 
     ## Look & Feel, these settings are available in the UI and can be overwritten there.
     # -- Default logo path, can be changed later
@@ -166,6 +197,8 @@ envFromConfigMap:
     ## Email
     # -- Return email address, needs to be valid email address format
     LEAN_EMAIL_RETURN: ""
+    # -- Sender display name for outgoing email. Defaults to "Leantime" when empty.
+    LEAN_EMAIL_FROM_NAME: ""
     # --Use SMTP? If set to false, the default php mail() function will be used
     # NOTE: If true, make sure to set `LEAN_EMAIL_SMTP_USERNAME` and `LEAN_EMAIL_SMTP_PASSWORD` in the env or `envFromSecret.data`
     LEAN_EMAIL_USE_SMTP: "false"
@@ -199,13 +232,18 @@ envFromConfigMap:
     LEAN_LDAP_DN: ""
     # -- Leantime->Ldap attribute mapping
     # For AD use these default attributes
-    # `{\"username\":\"cn\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"givenName\",\"lastname\":\"sn\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\"\"jobLevel\":\"level\"\"department\":\"department\"}`
-    LEAN_LDAP_KEYS: "{\"username\":\"uid\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"displayname\",\"lastname\":\"\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\"\"jobLevel\":\"level\"\"department\":\"department\"}"
+    # `{\"username\":\"cn\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"givenName\",\"lastname\":\"sn\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\",\"jobLevel\":\"level\",\"department\":\"department\"}`
+    LEAN_LDAP_KEYS: "{\"username\":\"uid\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"displayname\",\"lastname\":\"\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\",\"jobLevel\":\"level\",\"department\":\"department\"}"
     # -- Default Leantime Role on creation. (set to editor)
-    LEAN_LDAP_DEFAULT_ROLE_KEY: "20;"
+    LEAN_LDAP_DEFAULT_ROLE_KEY: "20"
     # -- Default role assignments upon first login.
     # optional - Can be updated later in user settings for each user
     LEAN_LDAP_GROUP_ASSIGNMENT: "{\"5\":{\"ltRole\":\"readonly\",\"ldapRole\":\"readonly\"},\"10\":{\"ltRole\":\"commenter\",\"ldapRole\":\"commenter\"},\"20\":{\"ltRole\":\"editor\",\"ldapRole\":\"editor\"},\"30\":{\"ltRole\":\"manager\",\"ldapRole\":\"manager\"},\"40\":{\"ltRole\":\"admin\",\"ldapRole\":\"administrators\"},\"50\":{\"ltRole\":\"owner\",\"ldapRole\":\"administrators\"}}"
+    # -- Providers whose accounts are admin-managed may report email_verified=false.
+    # Keep true unless your IdP (e.g. some Keycloak realms) requires otherwise.
+    LEAN_OIDC_REQUIRE_VERIFIED_EMAIL: "true"
+    # -- Only enable for self-signed OIDC providers on a trusted network.
+    LEAN_OIDC_SKIP_TLS_VERIFY: "false"
 
     ## OpenID Connect
     # -- Use to enable or disable OpenID Connect.
@@ -268,14 +306,47 @@ envFromConfigMap:
     LEAN_REDIS_SCHEME: ""
     # -- The Redis username
     LEAN_REDIS_USERNAME: ""
+    # -- Redis database used for sessions. Must differ from the cache database
+    # (LEAN_REDIS_DB, default 0) so a cache FLUSHDB cannot log users out.
+    LEAN_REDIS_SESSION_DB: "1"
+
+    ## Reverse proxy / origin checks
+    # -- Comma-separated IPs/CIDRs whose X-Forwarded-* headers are trusted.
+    # Empty trusts loopback and private networks, which covers most in-cluster
+    # ingress controllers. Set this when your proxy/CDN connects from a public
+    # address. The literal value `REMOTE_ADDR` trusts every client.
+    LEAN_TRUSTED_PROXIES: ""
+    # -- Reject state-changing requests from other origins. Only disable as an
+    # emergency switch; requires LEAN_APP_URL to be correct.
+    LEAN_CSRF_ORIGIN_CHECK: "true"
 
     ## Rate limiting per minute
     # -- General rate limiting per minute for all requests, calculated per a combo of IP and session or anonymous user
-    LEAN_RATELIMIT_GENERAL: "1000"
+    LEAN_RATELIMIT_GENERAL: "2000"
     # -- API rate limiting per minute, calculated per a combo of IP and session or anonymous user
-    LEAN_RATELIMIT_API: "10"
+    LEAN_RATELIMIT_API: "120"
     # -- Login rate limiting per minute, calculated per a combo of IP and session or anonymous user
     LEAN_RATELIMIT_AUTH: "20"
+    # -- MCP endpoint requests per minute
+    LEAN_RATELIMIT_MCP: "300"
+    # -- Signup and user-invite POSTs per IP per minute
+    LEAN_RATELIMIT_SIGNUP: "5"
+    # -- Password reset POSTs per IP per 10 minutes
+    LEAN_RATELIMIT_PASSWORD_RESET: "5"
+    # -- Two-factor code attempts per user per 5 minutes
+    LEAN_RATELIMIT_TWOFA: "5"
+    # -- User invites per inviting user per hour
+    LEAN_RATELIMIT_INVITES_USER: "10"
+    # -- User invites per installation per day
+    LEAN_RATELIMIT_INVITES_TENANT: "30"
+
+    ## Database driver (advanced)
+    # -- `mysql` (MySQL/MariaDB) or `pgsql` (experimental PostgreSQL support).
+    LEAN_DB_DEFAULT_CONNECTION: "mysql"
+    # -- PostgreSQL schema (only with LEAN_DB_DEFAULT_CONNECTION=pgsql)
+    LEAN_DB_SCHEMA: "public"
+    # -- PostgreSQL SSL mode (only with LEAN_DB_DEFAULT_CONNECTION=pgsql)
+    LEAN_DB_SSLMODE: "prefer"
 
 # -- This is the default configuration passed to Leantime via environment variables.
 # Variables here take precedence over envFromConfigMap.
@@ -298,7 +369,7 @@ envFromSecret:
   # -- Additional annotations to add to the generated secret
   secretAnnotations: {}
   # -- The default contents for Secret. Based on
-  # [Leantime's sample.env](https://github.com/Leantime/docker-leantime/blob/master/sample.env)
+  # [Leantime's sample.env](https://github.com/Leantime/leantime/blob/master/config/sample.env)
   # and used for sensitive details. Values here are all empty string and should be used only if
   # overriding auto-generation.
   data:
@@ -349,8 +420,10 @@ envFromSecret:
 # depending on other values or places where they're set but they will be overridden
 # in the actual environment by any defined variable in `env`
 envVarOverrides:
-  # -- Sets the value of LEAN_APP_URL, needed for subfolder or proxy installs (including http:// or https://)
-  # Required if ingress is not enabled.
+  # -- Sets the value of LEAN_APP_URL, needed for subfolder or proxy installs
+  # (including http:// or https://). Since Leantime 3.10.2 this URL is used for
+  # origin checks and email links, so when a proxy rewrites the Host header it
+  # must be the public URL users reach, not an in-cluster service name.
   appUrl: ""
   # -- Sets the value of LEAN_DB_HOST, needed for subfolder or proxy installs (including http:// or https://)
   # Required if ingress is not enabled and you are still using a proxy (e.g. svc of type LoadBalancer)
@@ -387,6 +460,10 @@ podAnnotations: {}
 # -- This is for setting Kubernetes Labels to a Pod.
 # For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/>
 podLabels: {}
+
+# Pod priorityClassName, used by both the Leantime and migration pods.
+# @ignored
+priorityClassName: ""
 
 # -- Pod level
 # [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
@@ -467,7 +544,11 @@ persistence:
     # issues. The alternative is to bake plugins on top of the Leantime image, but that requires automation and work around
     # building and privately hosting the image.
     plugins:
-      # -- Whether to enable the plugins volumeMount
+      # -- Whether to enable the plugins volumeMount.
+      # Enable this to persist Leantime 3.12's in-place plugin updates. Leave it
+      # disabled when plugins are baked into the image or when a free-form
+      # `volumeMounts` entry already mounts /var/www/html/app/Plugins; the chart
+      # skips its own mount when a user mount targets the same path.
       enabled: false
       # -- Path within the container at which the volume with the plugins should be mounted. Must not contain ':'
       mountPath: /var/www/html/app/Plugins
@@ -508,6 +589,47 @@ resources: {}
 # In production we'd like to ensure probes fail on e.g. a database error.
 testing:
   enabled: false
+
+# -- Extra PHP ini directives mounted into the container.
+# Useful to reduce exposure to PHP CVEs before a rebuilt image is available.
+# The defaults below disable `session.upload_progress` and lower multipart
+# limits, both mitigation paths from CVE-2026-109618 / CVE-2026-109619.
+# The official Docker image sets `memory_limit=1G`, `post_max_size=100M` and
+# `upload_max_filesize=100M`; override them here if you need different values.
+phpIni:
+  # -- Mount an extra ini file at /usr/local/etc/php/conf.d/zz-leantime.ini
+  enabled: false
+  # -- Use an existing ConfigMap instead of creating one. It must contain the
+  # key `zz-leantime.ini`. Changes to its data are detected with `lookup` and
+  # roll the pod on the next upgrade.
+  existingConfigMap: ""
+  # -- Contents of the generated ConfigMap key `zz-leantime.ini`.
+  data: |
+    session.upload_progress.enabled=0
+    post_max_size=32M
+    upload_max_filesize=24M
+    max_input_nesting_level=64
+    max_file_uploads=20
+
+# -- Run `php bin/leantime db:migrate` as a pre-upgrade hook.
+# The hook runs before the new ConfigMap/Secret is applied, so it uses the
+# previous release's database settings. Rotate DB credentials/settings in a
+# separate upgrade first. It also runs while the old pods are serving; scale
+# the app to zero if writes during the schema update are a concern. A Helm
+# rollback does not downgrade the schema, so back up the database.
+migration:
+  # -- Enable the pre-upgrade database migration Job.
+  enabled: false
+  # -- Number of retries before the upgrade fails
+  backoffLimit: 3
+  # -- Maximum time in seconds for the migration Job. Keep this below Helm's
+  # default `--timeout` of 300s.
+  activeDeadlineSeconds: 240
+  # -- Resources for the migration Job
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
 # -- This section is for setting up autoscaling more information can be found here: <https://kubernetes.io/docs/concepts/workloads/autoscaling/>
 autoscaling:
@@ -560,7 +682,7 @@ mariadb:
   primary: {}
   # -- Secondary values if different from defaults
   # NOTE: persistence is enabled by default so with a request of 8Gi
-  Secondary: {}
+  secondary: {}
 
 # -- Pod [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector)
 nodeSelector: {}
