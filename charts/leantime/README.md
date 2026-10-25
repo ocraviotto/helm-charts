@@ -23,16 +23,24 @@ If using the included MariaDB and/or enabling persistence with claim enabled:
 
 ## Upgrading from 3.5.12 to 3.12.0
 
-Take a database backup and scale to one replica before upgrading. The schema
-moves from `3.4.9` to `3.5.30`; run `php bin/leantime db:migrate` (or complete
-the `/update` screen as an admin) afterwards. `migration.enabled=true` runs it
-as a pre-upgrade hook.
+Back up the database before upgrading. The schema moves from `3.4.9` to
+`3.5.30`. `migration.enabled=true` runs `php bin/leantime db:migrate` as a
+pre-upgrade hook; otherwise run it after the rollout (or complete the
+`/update` screen as an admin).
+
+The hook runs before Helm applies the new ConfigMap/Secret, so it uses the
+previous release's database settings. Rotate DB credentials or change DB
+settings in a separate upgrade first. It also runs while the old pods are
+serving; scale the app to zero if writes during the schema update are a
+concern. A Helm rollback does not downgrade the schema.
 
 Breaking and behaviour-changing items in this range:
 
 | Area | Change | Action |
 |------|--------|--------|
 | Session timeout | `LEAN_SESSION_EXPIRATION` is **minutes**, not seconds. The old chart default `28800` meant ~20 days. | New default is `480` (8 hours). |
+| Session cookies | The chart used to force `LEAN_SESSION_SECURE=false`. It is now omitted so Leantime auto-detects Secure cookies. | Add `LEAN_SESSION_SECURE` through `env` only if you need to force it. |
+| PHP upload limits | With `phpIni.enabled=true`, the defaults are `post_max_size=32M` and `upload_max_filesize=24M`, down from the image's 100M. | Raise them in `phpIni.data` if users upload larger files. |
 | App URL | Leantime 3.10.2+ uses `LEAN_APP_URL` for origin checks; 3.10.3+ builds reset/invite links from it. | Set `envVarOverrides.appUrl` when a proxy rewrites the Host header. |
 | Trusted proxies | Public proxies/CDNs are no longer trusted by default. | Set `LEAN_TRUSTED_PROXIES` if your proxy egresses from a public address. |
 | Security release 3.10.2 | Origin/CSRF checks, session rotation, forced sign-out, invalidated reset links, OIDC `email_verified`/TLS validation, role-escalation limits, GET deletes → POST. | Expect one sign-out; review OIDC/LDAP/role settings and plugins with cross-site callbacks. |
@@ -40,8 +48,16 @@ Breaking and behaviour-changing items in this range:
 | Permissions | A fail-closed permission engine replaced ad-hoc role checks. | Re-test every role and plugin; `LEAN_PERMISSIONS_ENFORCE=false` gives audit-only mode temporarily. |
 | Templates/editor | TinyMCE was replaced by Tiptap (3.7) and all legacy templates moved to Blade (3.8). | Rewrite custom editor plugins and template/theme overrides. |
 | Timezones | 3.10.1 runs PHP in UTC; `LEAN_DEFAULT_TIMEZONE` is only a user default. | Existing non-UTC timestamps are not migrated and may display shifted. |
-| Plugins | 3.12 adds compatibility guards, a crash breaker and one-click/automatic updates. Updates write to `/var/www/html/app/Plugins`. | Keep `persistence.volumeMounts.plugins.enabled=true` or bake plugins into the image. |
-| PHP runtime | The 3.12.0 image was rebuilt on 2026-10-21 with PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. The tag is mutable. | Keep `image.pullPolicy=Always`, or pin `image.digest`; test plugins against PHP 8.4. |
+| Plugins | 3.12 adds compatibility guards, a crash breaker and one-click/automatic updates. Updates write to `/var/www/html/app/Plugins`. | Enable `persistence.volumeMounts.plugins.enabled` only for in-place updates. Leave it disabled when baking plugins into the image or when a free-form `volumeMounts` entry mounts the same path. |
+| PHP runtime | The 3.12.0 image was rebuilt on 2026-10-21 with PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. The tag is mutable. | Keep `image.pullPolicy=Always`, or pin `image.digest` (digest pinning also allows `IfNotPresent`, avoiding registry and rate-limit failures); test plugins against PHP 8.4. |
+
+### Migration hook
+
+`migration.enabled=true` renders a `pre-upgrade` Job. It waits for the database
+port, handles `*_FILE` secret variables, runs `db:migrate --no-interaction`,
+and has `activeDeadlineSeconds: 240` (below Helm's default 5-minute timeout).
+Raise `migration.activeDeadlineSeconds` and pass a matching
+`helm upgrade --timeout` if your database is slow.
 
 ## Installing the Chart
 
@@ -77,7 +93,7 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | envFromConfigMap.cmName | string | `"{{ include \"leantime.fullname\" . }}-env"` | Sets the configMap name |
 | envFromConfigMap.data | object | `{"LEAN_ALLOW_TELEMETRY":"false","LEAN_APP_URL":"{{ include \"leantime.appUrl\" . }}","LEAN_CSRF_ORIGIN_CHECK":"true","LEAN_DB_BACKUP_PATH":"backupdb/","LEAN_DB_DATABASE":"{{ include \"leantime.db.name\" . }}","LEAN_DB_DEFAULT_CONNECTION":"mysql","LEAN_DB_HOST":"{{ include \"leantime.db.host\" . }}","LEAN_DB_PORT":"3306","LEAN_DB_SCHEMA":"public","LEAN_DB_SSLMODE":"prefer","LEAN_DEBUG":"0","LEAN_DEFAULT_THEME":"default","LEAN_DEFAULT_TIMEZONE":"America/Los_Angeles","LEAN_DISABLE_LOGIN_FORM":"false","LEAN_EMAIL_FROM_NAME":"","LEAN_EMAIL_RETURN":"","LEAN_EMAIL_SMTP_AUTH":"true","LEAN_EMAIL_SMTP_AUTO_TLS":"true","LEAN_EMAIL_SMTP_HOSTS":"","LEAN_EMAIL_SMTP_PORT":"587","LEAN_EMAIL_SMTP_SECURE":"STARTTLS","LEAN_EMAIL_SMTP_SSLNOVERIFY":"false","LEAN_EMAIL_USE_SMTP":"false","LEAN_HSTS_ENABLED":"false","LEAN_LANGUAGE":"en-US","LEAN_LDAP_DEFAULT_ROLE_KEY":"20","LEAN_LDAP_DN":"","LEAN_LDAP_GROUP_ASSIGNMENT":"{\"5\":{\"ltRole\":\"readonly\",\"ldapRole\":\"readonly\"},\"10\":{\"ltRole\":\"commenter\",\"ldapRole\":\"commenter\"},\"20\":{\"ltRole\":\"editor\",\"ldapRole\":\"editor\"},\"30\":{\"ltRole\":\"manager\",\"ldapRole\":\"manager\"},\"40\":{\"ltRole\":\"admin\",\"ldapRole\":\"administrators\"},\"50\":{\"ltRole\":\"owner\",\"ldapRole\":\"administrators\"}}","LEAN_LDAP_HOST":"","LEAN_LDAP_KEYS":"{\"username\":\"uid\",\"groups\":\"memberOf\",\"email\":\"mail\",\"firstname\":\"displayname\",\"lastname\":\"\",\"phone\":\"telephoneNumber\",\"jobTitle\":\"title\",\"jobLevel\":\"level\",\"department\":\"department\"}","LEAN_LDAP_LDAP_DOMAIN":"","LEAN_LDAP_LDAP_TYPE":"OL","LEAN_LDAP_PORT":"389","LEAN_LDAP_URI":"","LEAN_LDAP_USE_LDAP":"false","LEAN_LOGO_PATH":"/dist/images/logo.svg","LEAN_LOG_CHANNELS":"single,syslog,sentry","LEAN_LOG_DEPRECATIONS":"0","LEAN_LOG_PATH":"","LEAN_NEWS_ENABLED":"true","LEAN_OIDC_CREATE_USER":"false","LEAN_OIDC_DEFAULT_ROLE":"20","LEAN_OIDC_ENABLE":"false","LEAN_OIDC_PROVIDER_URL":"https://token.actions.githubusercontent.com/","LEAN_OIDC_REQUIRE_VERIFIED_EMAIL":"true","LEAN_OIDC_SKIP_TLS_VERIFY":"false","LEAN_PERMISSIONS_ENFORCE":"true","LEAN_PRIMARY_COLOR":"#006d9f","LEAN_PRINT_LOGO_URL":"/dist/images/logo.png","LEAN_RATELIMIT_API":"120","LEAN_RATELIMIT_AUTH":"20","LEAN_RATELIMIT_GENERAL":"2000","LEAN_RATELIMIT_INVITES_TENANT":"30","LEAN_RATELIMIT_INVITES_USER":"10","LEAN_RATELIMIT_MCP":"300","LEAN_RATELIMIT_PASSWORD_RESET":"5","LEAN_RATELIMIT_SIGNUP":"5","LEAN_RATELIMIT_TWOFA":"5","LEAN_REDIS_HOST":"","LEAN_REDIS_PORT":"6379","LEAN_REDIS_SCHEME":"","LEAN_REDIS_SESSION_DB":"1","LEAN_REDIS_URL":"","LEAN_REDIS_USERNAME":"","LEAN_S3_BUCKET":"","LEAN_S3_FOLDER_NAME":"","LEAN_S3_REGION":"","LEAN_S3_USE_PATH_STYLE_ENDPOINT":"true","LEAN_SECONDARY_COLOR":"#00a886","LEAN_SESSION_EXPIRATION":"480","LEAN_SITENAME":"Leantime","LEAN_SOFT_RELOAD":"true","LEAN_TRUSTED_PROXIES":"","LEAN_USER_FILE_PATH":"userfiles/","LEAN_USE_REDIS":"false","LEAN_USE_S3":"false"}` | The default contents for configMap. Based on [Leantime's sample.env](https://github.com/Leantime/leantime/blob/master/config/sample.env) Values support helm templating. NOTE: Make sure these are all strings! |
 | envFromConfigMap.data.LEAN_ALLOW_TELEMETRY | string | `"false"` | Whether to allow telemetry. If `false`, this will disable the telemetry submission and remove your unique instance ID. |
-| envFromConfigMap.data.LEAN_APP_URL | string | The value of ingress.hosts[0].host if ingress is enabled. | Base URL, needed for subfolder or proxy installs (including http:// or https://) You can either modify this string or override (preferred) with `envVarOverrides.appUrl` |
+| envFromConfigMap.data.LEAN_APP_URL | string | The ingress URL when ingress is enabled; otherwise empty | Base URL, needed for subfolder or proxy installs (including http:// or https://) You can either modify this string or override (preferred) with `envVarOverrides.appUrl` (Leantime learns the URL at the first admin login). |
 | envFromConfigMap.data.LEAN_CSRF_ORIGIN_CHECK | string | `"true"` | Reject state-changing requests from other origins. Only disable as an emergency switch; requires LEAN_APP_URL to be correct. |
 | envFromConfigMap.data.LEAN_DB_BACKUP_PATH | string | `"backupdb/"` | Local relative path to store backup files, need permission to write (used if not using S3) |
 | envFromConfigMap.data.LEAN_DB_DATABASE | string | `"{{ include \"leantime.db.name\" . }}"` | Database name |
@@ -182,7 +198,7 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | fullnameOverride | string | `""` | This is to override the Helm Release name + the chart name. |
 | image | object | `{"digest":"","pullPolicy":"Always","registry":"docker.io","repository":"leantime/leantime","tag":""}` | This sets the container image more information can be found here: <https://kubernetes.io/docs/concepts/containers/images/> |
 | image.digest | string | `""` | Optional image digest (e.g. `sha256:...`). When set it is appended to the tag, making the deployment immutable. The 3.12.0 digest observed on 2026-10-24 was `sha256:8e093293224cf48a24cfac7f32631aa5335014a065cd62b8ced4a74e4d548b80`; verify it before pinning. |
-| image.pullPolicy | string | `"Always"` | This sets the pull policy for images. Leantime tags are mutable: upstream rebuilt the `3.12.0` tag in place on 2026-10-21 to ship PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. Keep `Always` for tag-based installs so nodes do not keep a cached image. |
+| image.pullPolicy | string | `"Always"` | This sets the pull policy for images. Leantime tags are mutable: upstream rebuilt the `3.12.0` tag in place on 2026-10-21 to ship PHP 8.4.27 for CVE-2026-109618 / CVE-2026-109619. Keep `Always` for tag-based installs so nodes do not keep a cached image. For air-gapped or Docker Hub rate-limited environments, mirror the image and pin `image.digest`; that also permits `IfNotPresent`. |
 | image.registry | string | `"docker.io"` | Set to allow to easily change registry and in our case, mainly to support renovate regular expressions (not required for the Docker hub). |
 | image.repository | string | `"leantime/leantime"` | We use the upstream leantime image by default. Images are built from <https://github.com/Leantime/leantime/tree/master/.docker>. |
 | image.tag | string |  value of chart appVersion | Used to override the image tag. |
@@ -204,21 +220,23 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | mariadb.image.repository | string | `"bitnamilegacy/mariadb"` | Required because of <https://github.com/bitnami/charts/issues/35164> |
 | mariadb.primary | object | `{}` | Primary values if different from defaults. NOTE: persistence is enabled by default so with a request of 8Gi |
 | mariadb.secondary | object | `{}` | Secondary values if different from defaults NOTE: persistence is enabled by default so with a request of 8Gi |
-| migration | object | `{"activeDeadlineSeconds":900,"backoffLimit":1,"enabled":false}` | Run `php bin/leantime db:migrate` as a pre-upgrade hook. Leantime 3.5.12 (schema 3.4.9) to 3.12.0 (schema 3.5.30) crosses many migrations. Scaling to one replica during the upgrade is strongly recommended; Helm cannot enforce that for you. |
-| migration.activeDeadlineSeconds | int | `900` | Maximum time in seconds for the migration job |
-| migration.backoffLimit | int | `1` | Number of retries before the upgrade fails |
+| migration | object | `{"activeDeadlineSeconds":240,"backoffLimit":3,"enabled":false,"resources":{"requests":{"cpu":"100m","memory":"256Mi"}}}` | Run `php bin/leantime db:migrate` as a pre-upgrade hook. The hook runs before the new ConfigMap/Secret is applied, so it uses the previous release's database settings. Rotate DB credentials/settings in a separate upgrade first. It also runs while the old pods are serving; scale the app to zero if writes during the schema update are a concern. A Helm rollback does not downgrade the schema, so back up the database. |
+| migration.activeDeadlineSeconds | int | `240` | Maximum time in seconds for the migration Job. Keep this below Helm's default `--timeout` of 300s. |
+| migration.backoffLimit | int | `3` | Number of retries before the upgrade fails |
+| migration.enabled | bool | `false` | Enable the pre-upgrade database migration Job. |
+| migration.resources | object | `{"requests":{"cpu":"100m","memory":"256Mi"}}` | Resources for the migration Job |
 | nameOverride | string | `""` | This is to override the chart name. |
 | nodeSelector | object | `{}` | Pod [nodeSelector](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector) |
-| persistence | object | `{"claim":{"accessMode":"ReadWriteOnce","annotations":{},"enabled":true,"size":"5Gi","storageClass":""},"enabled":false,"existingClaim":"","volumeMounts":{"plugins":{"enabled":true,"mountPath":"/var/www/html/app/Plugins","subPath":"plugins"},"publicUserFiles":{"enabled":true,"mountPath":"/var/www/public/userfiles","subPath":"public-userfiles"},"userFiles":{"enabled":true,"mountPath":"/var/www/html/userfiles","subPath":"userfiles"}}}` | A single volume will be used with both 'userfiles' for /var/www/userfiles, and 'public-userfiles' for /var/www/public/userfiles |
+| persistence | object | `{"claim":{"accessMode":"ReadWriteOnce","annotations":{},"enabled":true,"size":"5Gi","storageClass":""},"enabled":false,"existingClaim":"","volumeMounts":{"plugins":{"enabled":false,"mountPath":"/var/www/html/app/Plugins","subPath":"plugins"},"publicUserFiles":{"enabled":true,"mountPath":"/var/www/public/userfiles","subPath":"public-userfiles"},"userFiles":{"enabled":true,"mountPath":"/var/www/html/userfiles","subPath":"userfiles"}}}` | A single volume will be used with both 'userfiles' for /var/www/userfiles, and 'public-userfiles' for /var/www/public/userfiles |
 | persistence.claim | object | `{"accessMode":"ReadWriteOnce","annotations":{},"enabled":true,"size":"5Gi","storageClass":""}` | If existingClaim is empty and persistence is enabled, when `claim.enabled`is `true` we'll create a pvc based on these details |
 | persistence.claim.accessMode | string | `"ReadWriteOnce"` | See [accessMode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) |
 | persistence.claim.enabled | bool | `true` | If false, we'll use an emptyDir, which is an ephemeral volume and a very bad idea for production, but might be useful for testing |
 | persistence.claim.size | string | `"5Gi"` | Requested size |
 | persistence.enabled | bool | `false` | Enable persistent storage for user files. Unless claim is enabled or we have an existing claim, we'll use an emptyDir, which is kind of persistence. NOTE: If you're using S3, no need to use persistence. |
 | persistence.existingClaim | string | `""` | If not empty, it will use this existing Persistent Volume Claim |
-| persistence.volumeMounts | object | `{"plugins":{"enabled":true,"mountPath":"/var/www/html/app/Plugins","subPath":"plugins"},"publicUserFiles":{"enabled":true,"mountPath":"/var/www/public/userfiles","subPath":"public-userfiles"},"userFiles":{"enabled":true,"mountPath":"/var/www/html/userfiles","subPath":"userfiles"}}` | Pod volumes to mount into the container's filesystem. Cannot be updated. They will only be rendered if persistence.enabled is true and the volumeMount is also enabled. |
-| persistence.volumeMounts.plugins | object | `{"enabled":true,"mountPath":"/var/www/html/app/Plugins","subPath":"plugins"}` | This is meant to persist plugin installations. Unfortunately enabling it limits the scalability of Leantime as we then need to rely on a single persistence volume or deal with a ReadWriteMany setup and deal with performance issues. The alternative is to bake plugins on top of the Leantime image, but that requires automation and work around building and privately hosting the image. |
-| persistence.volumeMounts.plugins.enabled | bool | `true` | Whether to enable the plugins volumeMount. Leantime 3.12 can update plugins in place; without this mount those updates live only in the container filesystem and are lost on restart. It requires a shared volume (ReadWriteMany) if you scale beyond one replica. |
+| persistence.volumeMounts | object | `{"plugins":{"enabled":false,"mountPath":"/var/www/html/app/Plugins","subPath":"plugins"},"publicUserFiles":{"enabled":true,"mountPath":"/var/www/public/userfiles","subPath":"public-userfiles"},"userFiles":{"enabled":true,"mountPath":"/var/www/html/userfiles","subPath":"userfiles"}}` | Pod volumes to mount into the container's filesystem. Cannot be updated. They will only be rendered if persistence.enabled is true and the volumeMount is also enabled. |
+| persistence.volumeMounts.plugins | object | `{"enabled":false,"mountPath":"/var/www/html/app/Plugins","subPath":"plugins"}` | This is meant to persist plugin installations. Unfortunately enabling it limits the scalability of Leantime as we then need to rely on a single persistence volume or deal with a ReadWriteMany setup and deal with performance issues. The alternative is to bake plugins on top of the Leantime image, but that requires automation and work around building and privately hosting the image. |
+| persistence.volumeMounts.plugins.enabled | bool | `false` | Whether to enable the plugins volumeMount. Enable this to persist Leantime 3.12's in-place plugin updates. Leave it disabled when plugins are baked into the image or when a free-form `volumeMounts` entry already mounts /var/www/html/app/Plugins; the chart skips its own mount when a user mount targets the same path. |
 | persistence.volumeMounts.plugins.mountPath | string | `"/var/www/html/app/Plugins"` | Path within the container at which the volume with the plugins should be mounted. Must not contain ':' |
 | persistence.volumeMounts.plugins.subPath | string | `"plugins"` | Path within the volume from which plugins should be mounted. |
 | persistence.volumeMounts.publicUserFiles | object | `{"enabled":true,"mountPath":"/var/www/public/userfiles","subPath":"public-userfiles"}` | The original mount name for User uploaded files, here for compatibility, |
@@ -232,7 +250,7 @@ Make sure to check it out if intending on a more serious use of Leantime.
 | phpIni | object | `{"data":"session.upload_progress.enabled=0\npost_max_size=32M\nupload_max_filesize=24M\nmax_input_nesting_level=64\nmax_file_uploads=20\n","enabled":false,"existingConfigMap":""}` | Extra PHP ini directives mounted into the container. Useful to reduce exposure to PHP CVEs before a rebuilt image is available. The defaults below disable `session.upload_progress` and lower multipart limits, both mitigation paths from CVE-2026-109618 / CVE-2026-109619. The official Docker image sets `memory_limit=1G`, `post_max_size=100M` and `upload_max_filesize=100M`; override them here if you need different values. |
 | phpIni.data | string | `"session.upload_progress.enabled=0\npost_max_size=32M\nupload_max_filesize=24M\nmax_input_nesting_level=64\nmax_file_uploads=20\n"` | Contents of the generated ConfigMap key `zz-leantime.ini`. |
 | phpIni.enabled | bool | `false` | Mount an extra ini file at /usr/local/etc/php/conf.d/zz-leantime.ini |
-| phpIni.existingConfigMap | string | `""` | Use an existing ConfigMap instead of creating one. It must contain the key `zz-leantime.ini`. |
+| phpIni.existingConfigMap | string | `""` | Use an existing ConfigMap instead of creating one. It must contain the key `zz-leantime.ini`. Changes to its data are detected with `lookup` and roll the pod on the next upgrade. |
 | podAnnotations | object | `{}` | This is for setting Kubernetes Annotations to a Pod. For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/> |
 | podLabels | object | `{}` | This is for setting Kubernetes Labels to a Pod. For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/> |
 | podSecurityContext | object | `{"fsGroup":1000,"fsGroupChangePolicy":"OnRootMismatch","runAsGroup":1000,"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}}` | Pod level [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod). |
