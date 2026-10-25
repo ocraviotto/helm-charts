@@ -78,22 +78,24 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
-          # No readinessProbe on purpose: traffic is accepted during install and
-          # update. Liveness uses /health, which bypasses session, auth and
-          # install/update redirects, but still returns 503 when the database is
-          # unreachable.
+          # Liveness only checks that nginx/PHP-FPM answers, so a database
+          # outage does not restart every pod. Readiness uses /health, which
+          # checks the database, so the pod leaves the Service while the DB is
+          # unreachable. The startup probe uses the static /healthCheck.php and
+          # does not depend on routed application code.
           livenessProbe:
+            tcpSocket:
+              port: http
+          readinessProbe:
             httpGet:
               path: {{ ternary "/healthCheck.php" "/health" .Values.testing.enabled }}
               port: http
-          {{- if not .Values.testing.enabled }}
           startupProbe:
             httpGet:
-              path: /
+              path: /healthCheck.php
               port: http
             failureThreshold: 30
             periodSeconds: 10
-          {{- end }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

@@ -65,7 +65,12 @@ spec:
               until php -r 'exit(@fsockopen(getenv("LEAN_DB_HOST"), (int)(getenv("LEAN_DB_PORT") ?: 3306), $errno, $errstr, 2) ? 0 : 1);'; do
                 sleep 2
               done
-              exec php bin/leantime db:migrate --no-interaction
+              php bin/leantime db:migrate --no-interaction
+              # Leantime caches the domain route list forever in its installation
+              # store. Clear it so routes from domains added by the upgrade (such
+              # as Status and /health) are registered; a Redis-backed cache would
+              # otherwise survive the pod restart.
+              php bin/leantime cache:clear installation
           {{- with .Values.env }}
           env:
             {{- toYaml . | nindent 12 }}
