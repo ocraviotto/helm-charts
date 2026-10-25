@@ -3,5 +3,5 @@ set -euo pipefail
 chart="$1"
 
 if [[ -f "$chart/ci/test-migration" ]]; then
-  bash "$chart/ci/test-migration" "$chart"
+    bash "$chart/ci/test-migration" "$chart"
 fi
