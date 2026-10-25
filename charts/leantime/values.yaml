@@ -77,7 +77,7 @@ env: {}
   #   valueFrom:
   #     secretKeyRef:
   #       name: my-secret
-  #       key: oidClientSecret
+  #       key: oidcClientSecret
   # - name: LEAN_REDIS_PASSWORD
   #   valueFrom:
   #     secretKeyRef:
@@ -457,6 +457,9 @@ podAnnotations: {}
 # -- This is for setting Kubernetes Labels to a Pod.
 # For more information checkout: <https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/>
 podLabels: {}
+
+# -- Pod priorityClassName, used by both the Leantime and migration pods.
+priorityClassName: ""
 
 # -- Pod level
 # [securityContext](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
